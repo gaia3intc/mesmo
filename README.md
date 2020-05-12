@@ -1,9 +1,9 @@
 # mesmo
-MN Earth System Model for Ocean Biogeochemistry
+MESMO 
 Katsumi Matsumoto, University of Minnesota
 katsumi@umn.edu
 
-MESMO has undergone numerous revisions over the years. The first version MESMO1 was described in a GMD paper (Matsumoto et al., 2008). As noted by Matsumoto et al. (2008), MESMO is derived originally from GENIE-1, which is composed of the physical model of Edwards & Marsh (2005) and biogeochemistry model of Ridgwell et al. (2007). In another GMD paper, Matsumoto et al. (2013) describe the second version, MESMO2. These two papers provide comprehensive model description up to 2013. Then, Tanioka & Matsumoto (2017) introduced the power law model of phytoplankton applied for the case of two phytoplankton types. Matsumoto et al. (2020) expands the power law model to three phytoplankton types with additional modifications.  
+The MN Earth System Model for Ocean Biogeochemistry (MESMO) has undergone numerous revisions over the years. The first version MESMO1 was described in a GMD paper (Matsumoto et al., 2008). As noted by Matsumoto et al. (2008), MESMO is derived originally from GENIE-1, which is composed of the physical model of Edwards & Marsh (2005) and biogeochemistry model of Ridgwell et al. (2007). In another GMD paper, Matsumoto et al. (2013) describe the second version, MESMO2. These two papers provide comprehensive model description up to 2013. Then, Tanioka & Matsumoto (2017) introduced the power law model of phytoplankton applied for the case of two phytoplankton types. Matsumoto et al. (2020) expands the power law model to three phytoplankton types with additional modifications.  
 
 
 Edwards, N. R., & Marsh, R. (2005). Uncertainties due to transport-parameter sensitivity in an efficient 3-D ocean-climate model. Climate Dynamics, 24(4), 415–433. https://doi.org/10.1007/s00382-004-0508-8
