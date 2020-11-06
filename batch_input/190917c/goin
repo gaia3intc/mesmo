@@ -1,0 +1,28 @@
+       10000      100000       10000        1000       25000
+c
+         100           5
+20 20 0.90 1.0 2.028 1.0  	temp0 temp1 rel scf scf_nh scf_so
+4467 1.14762e-004              ocean diffusivites iso/dia (or horiz/vert)
+2.2112637                     inverse minimum drag in days
+3270879.1 1703928.5 0.97921245 0.17003968     atm. diff. amp. for T and q and dist'n width, slope
+0.002258867 0.0 0.22521368 0.22521368     atm. advection factors for T_z, T_m, q_z, q_m  
+1.0 0.0                  scl_co2 pc_co2_rise
+5579.2125                    sea-ice eddy diffusivity
+0. 0. 0.                 tatm relh0_ocean relh0_land
+-0.133576007 0.19026404 0.30145604          extra1a extra1b extra1c    total = 0.35814407    (control = .2865)
+190917c
+190912o
+0.0               Simulation start year [REAL]
+5001.0                    Simulation run length (yr) [REAL]
+f                        Simulation time scale as years Before Present (i.e., count years down or up)? [T/F t/f]
+t                        Over-ride goldstein time control? [T/F t/f]
+*                        Filename root ID of results files [31 CHARACTERS MAX STRING]
+y                        include biogem pCO2 in EMBM radiative forcing (y/n)
+5.77			delf2x
+setup_ents  orography file info ---------------------
+0 0 0                   time-varying orography(0 or 1)? t_orog,norog,orogsteps
+../genie-simpleland/data/orography.dat                            
+---setup_ents  icemask info:------------------
+0 0 0                   time-varying landicemask (0 or 1)?  t_lice,nlice,licesteps
+../genie-simpleland/data/icemask.dat                              
+0.85  3.65               rmax,timepptn

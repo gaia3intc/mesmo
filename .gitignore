@@ -32,3 +32,4 @@ xblah
 *.cmn~
 *.par~
 *.f~
+.gitignore

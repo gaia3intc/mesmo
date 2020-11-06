@@ -1,0 +1,17 @@
+! *************************************************************************************************
+! atchem_config.dat
+! INPUT PARAMETER FILE
+! *************************************************************************************************
+
+-START-OF-DATA-
+                    *** BLAH BLAH BLAH ***
+-END-OF-DATA-
+
+/\                  /\                                                                              /\
+VALUE               BORING WORDY DESCRIPTION                                                        DEFAULT VALUE
+
+
+NOTES
+-----
+
+* THERE NOTHING TO PUT IN THIS FILE YET!!!
