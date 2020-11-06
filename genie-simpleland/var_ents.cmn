@@ -1,0 +1,262 @@
+!C var_ents.cmn
+!C Common blocks for ENTS
+!C
+!cmsw Tunable Constants 
+      REAL
+     & k0,
+     & k7,
+     & k8,
+     & k9,
+     & k10,
+     & k11,    
+     & k11a,                 
+     & k12,  
+     & k13,                     
+     & k14,                     
+     & k16,
+     & k17,                     
+     & k18,  
+     & k20,
+     & k21,
+     & k24,
+     & k26,
+     & k29,
+     & k31,
+     & k32,
+     & kz0,
+     & rk19,
+     & rk25,
+     & rk30,
+     & q10,
+     & mu,
+     & rmu,
+     & topt,
+     & tzero
+
+cmsw 'Proper' constants
+
+      REAL
+     & k_a,                     ! number of moles of molecules in the atm
+     & gtm,                     ! Conversion const. (GtC to moles C)
+     & gtk,                     ! Conversion const. (GtC to kgC)
+     & rgtm,                    ! Conversion const. (moles C to GtC)
+     & rgtk,                    ! Conversion const. (kgC to GtC)
+     & mtp,                     ! ppmv to ppv
+     & rmtp,                    ! ppv to ppmv
+     & asurf,                   ! gridbox area (m2)
+     & rasurf,                  ! reciprocal of above
+     & rsyr                     ! reciprocal of secs/yr
+
+cmsw Model specific constants
+
+      INTEGER
+     & land_pts,                ! number of land points
+ckst     & nmth,                    ! number of months in a year (used in monthly winds)
+     & msimpleland,             ! how often simple land called (units of istep)
+     & snow(maxi,maxj)          ! snow possibility matrix
+
+
+      PARAMETER ( land_pts=362 )
+ckst      PARAMETER ( nmth=12 )
+      PARAMETER ( tzero=273.15 )
+
+
+      COMMON /landconsts_real/k0,k7,k8,k9,k10,k11,k11a,k12,k13,k14
+     & ,k16,k17,k18,k20,k21,k24
+     & ,k26,k29,k31,k32,kz0
+     & ,rk25,rk19,rk30,mu,rmu,topt
+     & ,k_a,gtm,rgtm,mtp,rmtp,asurf,rasurf,rsyr
+     & ,q10,gtk,rgtk
+
+      COMMON /landconsts_int/msimpleland,snow
+
+cmsw carbon reservoirs
+!km 8/2011 add c isotopes
+   
+      REAL 
+     & Cveg(maxi,maxj),        ! Veg carbon reservoir present (kgC/m2)
+     & Csoil(maxi,maxj),       ! Soil carbon reservoir present (kgC/m2)
+     & fv(maxi,maxj),          ! Fractional vegetation cover (/gridbox)
+     & epsv(maxi,maxj),        ! Vegetation shelf shading fraction (/gridbox)
+     & pco2ld                  ! atmospheric pCO2 (ppmv)
+
+      COMMON /landCreservoirs/ Cveg,Csoil,fv,epsv,
+     & pco2ld
+
+      REAL
+     & dtland                  ! time (seconds) of each land timestep
+
+      COMMON /landstep/ dtland
+
+      REAL
+     & leaf(maxi,maxj),         ! leaf litter (kgC/m2/yr) 
+     & respveg(maxi,maxj),      ! vegetation respiration (kgC/m2/yr)
+     & respsoil(maxi,maxj),     ! soil respiration (kgC/m2/yr) 
+     & photo(maxi,maxj)         ! photosynthesis (kgC/m2/yr)
+
+      COMMON /components/ leaf,respveg,respsoil,photo
+
+!km - can't do #ifdef cisotopes_ents in common block 
+      REAL 
+     & Cveg_13(maxi,maxj),     ! Veg C carbon-13 (kgC/m2)
+     & Cveg_14(maxi,maxj),     ! Veg C carbon-14 (kgC/m2)
+     & Csoil_13(maxi,maxj),    ! Soil C carbon-13 (kgC/m2)
+     & Csoil_14(maxi,maxj),    ! Soil C carbon-14 (kgC/m2)
+     & sCveg1_13(maxi,maxj),   ! summed veg carbon 13
+     & sCveg1_14(maxi,maxj),   ! summed veg carbon 14
+     & sCsoil1_13(maxi,maxj),  ! summed soil carbon 13
+     & sCsoil1_14(maxi,maxj),  ! summed soil carbon 14
+     & alphaC_photo,	       ! photosyn. fractionation (-18.5 permil defined in setup_ents.F)
+     & alphaC_respveg,         ! respiratory fractionation (assume 0 permil)
+     & alphaC_leaf,            ! leaf turnover fractionation (assume 0 permil)
+     & alphaC_respsoil,        ! soil respiration fractionation (assume 0 permil)
+     & pco2ld_13, pco2ld_14   ! atmospheric C13 and C14
+!     & inv0_14Cents,           ! initial land C14 inventory (moles-C14) for production in atchem_main.f90 
+!     & inv_14Cents	       ! land C14 inventory (moles-C14) for production in atchem_main.f90 
+
+      COMMON /landCisotopes/ Cveg_13,Cveg_14,Csoil_13,Csoil_14,
+     & alphaC_photo,alphaC_respveg,alphaC_leaf,alphaC_respsoil,
+     & pco2ld_13,pco2ld_14
+
+!km - these are defined in gem_cmn.fop inv0_14Cents,inv_14Cents
+
+      REAL
+     & leaf_13(maxi,maxj),         ! leaf litter carbon-13 (kgC/m2/yr) 
+     & leaf_14(maxi,maxj),         ! leaf litter carbon-14 (kgC/m2/yr) 
+     & respveg_13(maxi,maxj),      ! vegetation respiration carbon-13 (kgC/m2/yr)
+     & respveg_14(maxi,maxj),      ! vegetation respiration carbon-14 (kgC/m2/yr)
+     & respsoil_13(maxi,maxj),     ! soil respiration carbon-13 (kgC/m2/yr) 
+     & respsoil_14(maxi,maxj),     ! soil respiration carbon-14 (kgC/m2/yr) 
+     & photo_13(maxi,maxj),        ! photosynthesis carbon-13 (kgC/m2/yr)
+     & photo_14(maxi,maxj)         ! photosynthesis carbon-14 (kgC/m2/yr)
+
+      COMMON /components_Cisotopes/
+     & leaf_13,respveg_13,respsoil_13,photo_13,
+     & leaf_14,respveg_14,respsoil_14,photo_14
+!km #endif /*cisotopes_ents*/
+
+cmsw Arrays used to calculate .sland.avg files
+cmsw Used in annav_diags (these arrays only used 
+cmsw to calculate .avg files)
+
+      REAL
+     & sphoto(maxi,maxj),      ! summed photosynth  
+     & srveg(maxi,maxj),       ! summed veg resp 
+     & sleaf(maxi,maxj),       ! summed leaf litter 
+     & srsoil(maxi,maxj),      ! summed soil resp 
+     & sCveg1(maxi,maxj),      ! summed veg carbon 
+     & sCsoil1(maxi,maxj),     ! summed soil carbon 
+     & sfv1(maxi,maxj),        ! summed veg fraction 
+     & sepsv1(maxi,maxj),      ! summed self shading 
+     & pco2ld_tot,             ! for use in timeseries summing
+     & tot_mass_ocn_c,         ! for use in timeseries summing
+     & stqld(2,maxi,maxj),     ! summed land temp (1) and water (2)
+     & sfx0a(maxi,maxj),       ! summed flux into atmosphere over land
+     & sfx0o(maxi,maxj),       ! summed flux into land
+     & sfxsens(maxi,maxj),     ! summed sensible heat flux over land
+     & sfxlw(maxi,maxj),       ! summed net longwave heat flux over land
+     & sevap(maxi,maxj),       ! summed evapotranspiration over land
+     & spptn(maxi,maxj),       ! summed pptn over land
+     & srelh(maxi,maxj),       ! summed relative humidity over land
+     & sbcap(maxi,maxj),       ! summed soil field capacity
+     & salbs(maxi,maxj),       ! summed albedo over land
+     & ssnow(maxi,maxj),       ! summed snow over land
+     & sz0(maxi,maxj)          ! summed roughness length over land
+
+      COMMON /avgarrays/ sphoto,srveg,sleaf,srsoil,
+     & sCveg1,sCsoil1,sfv1,sepsv1,pco2ld_tot,tot_mass_ocn_c,
+     & stqld,sfx0a,sfx0o,sfxsens,sfxlw,
+     & sevap,spptn,srelh,sbcap,salbs,ssnow,sz0
+
+cmsw Land radiation and hydrology arrays
+
+      REAL
+     &  tqld(2,maxi,maxj)          ! land temp(1) oC and bucket fullness(2) m
+     & ,tqldavg(2,maxi,maxj)       ! avg version of above
+     & ,bcap(maxi,maxj)            ! bucket capacity m
+     & ,bcapavg(maxi,maxj)         ! avg bucket capacity (m)
+     & ,fxavg(7,maxi,maxj)         ! avg heat fluxes (W/m2)/timescale avg over
+     & ,snowavg(maxi,maxj)         ! avg fractional snow cover
+     & ,z0avg(maxi,maxj)           ! avg roughness length (m)
+     & ,rhcld                      ! scale used to calculate r.o.c. land temp.
+     & ,eml                        ! land emissivity
+     & ,albedol                    ! land albedo
+     & ,albs(maxi,maxj)            ! surface albedo
+     & ,albsavg(maxi,maxj)         ! average surface albedo
+     & ,dtdim                      ! length of ocean timestep (s)
+     & ,z0(maxi,maxj)              ! roughness length (m) 
+     & ,chl(maxi,maxj)             ! transfer coefficient
+     & ,cel(maxi,maxj)             ! ditto
+     & ,lambda                     ! decay timescale for new pptn scheme
+     & ,atm_alb(maxi,maxj,maxnyr)  ! atmospheric albedo
+     & ,asnow                      ! snow albedo
+     & ,asnowv                     ! snow with veg present albedo
+     & ,aveg                       ! vegetation albedo
+     & ,apeat                      ! peat albedo
+     & ,asand                      ! sand albedo
+     & ,albo(maxj,maxnyr)          ! ocean albedo
+     & ,palb(maxi,maxj)            ! planetary albedo
+     & ,palbavg(maxi,maxj)         ! average planetary albedo
+     & ,evapavg(maxi,maxj)         ! average evapotranspiration (m/s)
+     & ,pptnavg(maxi,maxj)         ! average pptn (m/s)
+     & ,runavg(maxi,maxj)          ! average runoff (m/s)
+     & ,gmairttot                  ! summed global mean temperature
+     & ,slicemask(maxi,maxj)       ! land ice sheet mask
+     & ,fvfv(maxi,maxj)            ! vegetation fraction for fixed vegetation
+
+      COMMON /entsrad/
+     & tqld,tqldavg,bcap,bcapavg,fxavg,snowavg,z0avg,rhcld,eml,
+     & albedol,dtdim,z0,cel,chl,lambda,
+     & atm_alb,asnow,asnowv,albs,
+     & albsavg,aveg,apeat,asand,albo,palb,palbavg,
+     & evapavg,
+     & pptnavg,runavg,gmairttot,slicemask,
+     & fvfv
+
+cmsw Offline arrays
+
+      REAL
+     &  tncep(maxi,maxj,maxnyr)  ! NCEP air temperature (oC)
+     & ,pncep(maxi,maxj,maxnyr)  ! NCEP pptn (m/s)
+     & ,rhncep(maxi,maxj,maxnyr) ! NCEP relative humidity at 1000mb (%)
+
+      COMMON /offline/
+     & tncep,pncep,rhncep
+
+cmsw Switches and datasets
+
+      REAL
+     &  lapse                     ! lapse rate (K/km)
+     & ,orog(maxi,maxj)           ! land height above sea-level (m)
+     & ,uatml(2,maxi,maxj,maxnyr) ! u and v wind comp.'s
+     & ,usurfl(maxi,maxj,maxnyr)  ! windspeed (m/s)
+     & ,rhoref                    ! reference average ocean density for sea-level change
+     & ,glairts                   ! summed air temp over Greenland
+     & ,glairt                    ! annual average air temp over Greenland
+     & ,isslold                   ! last year's sealevel change from Greenland melt
+     & ,issl                      ! sealevel change from Greenland melt
+     & ,glmelt                    ! annual mean runoff from Greenland melt (m/s)
+     & ,isslfwf                   ! Same as issl if FW added to ocean
+     & ,glairtini                 ! initial air temperature over Greenland
+
+      INTEGER
+     &  orogswitch            ! turns on/off altitude effects
+     & ,snowswitch            ! turns on/off snow albedo feedbacks on climate
+     & ,offlineswitch         ! turns on/off offline version of model
+     & ,seasonswitch          ! turns on/off seasonal prescribed fields
+     & ,icemeltfwfswitch      ! turns on/off Greenland FW melt added to ocean
+     & ,imth                  ! month of the year, worked out in mains.F (for seasonal arrays)
+
+      CHARACTER
+     & include_emissions      ! y/n for emissions to be included or not 
+
+      COMMON /other/
+     &  lapse,orog
+     & ,uatml,usurfl
+     & ,rhoref,glairts,glairt,isslold
+     & ,issl,glmelt,isslfwf,glairtini
+
+      COMMON /switches/orogswitch,snowswitch
+     & ,offlineswitch,seasonswitch,icemeltfwfswitch,imth
+
+      COMMON /emiss_ch/include_emissions

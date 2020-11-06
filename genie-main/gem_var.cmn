@@ -1,0 +1,58 @@
+*
+* gem_var.cmn common block
+*
+
+c time step factors
+      integer matchem,msedgem
+      integer mbiogem,mgemlite
+      parameter ( matchem = 5, msedgem = 100 )           !matchem = #atmosphere steps per ocean step, matchem=5 -> 500 atchem steps/yr 
+      parameter ( mbiogem = 5, mgemlite = 1 )  		 !use this usually NOTE: if you change mbiogem & are using constTdosc -- you must change declare in biogem_lib
+!      parameter ( mbiogem = 2, mgemlite = 1 )           !mbiogem = #ocean steps per biogem step , mbiogem = 5     ->  20 biogem steps/yr 
+c      parameter ( matchem = 1, msedgem = 100 )          !   [currently/usually: 500 atm.steps/yr, 100 ocean stps/yr, 20 biogemsteps/yr]
+c      parameter ( mbiogem = 1, mgemlite = 1 )           !msedgem (like mbiogem) = #ocean steps ber sedgem step, msedgem = 100 -> 1 sedgem step/yr
+      
+c     tracer dimensions (MUST be the same as defined in gem_cmn.f90)
+      integer maxocn,maxatm,maxsed
+c      parameter ( maxocn = 49, maxatm = 19, maxsed = 42 )	
+c      parameter ( maxocn = 52, maxatm = 19, maxsed = 42 )	! w/ DOCr and isotopes
+      parameter ( maxocn = 56, maxatm = 19, maxsed = 42 )	! w/ DOPr, DONr, DOCdr, DOFer
+
+c AtCheM grid
+      integer maxia,maxja,maxka
+      parameter ( maxia = 36, maxja = 36, maxka = 1 )
+c atmosphere-surface fluxes; GOLDSTEIn grid
+      real sfxatm1(0:maxatm,1:maxi,1:maxj)
+c atmosphere-surface fluxes; integrated, AtCheM grid
+      real sfxsumatm(0:maxatm,1:maxia,1:maxja)
+c atmosphere-surface tracer composition; AtCheM grid
+      real sfcatm(0:maxatm,1:maxia,1:maxja)
+c atmosphere-surface tracer composition; GOLDSTEIn grid 
+      real sfcatm1(0:maxatm,1:maxi,1:maxj)
+c AtCheM emission variables
+      integer emyrs,secol
+      integer ecount,emyr_count
+!      parameter ( emyrs = 2000, secol = 1 )
+      parameter ( emyrs = 4096, secol = 1 )
+      real conv_Gt_atm(0:emyrs,0:secol)
+      real emyear(0:emyrs)
+
+c SedGeM grid
+      integer maxis,maxjs
+      parameter ( maxis = 36, maxjs = 36 )
+c      parameter ( maxis = 72, maxjs = 72 )
+c sediment-surface (ocn->sed) fluxes; GOLDSTEIn grid
+      real sfxsed1(0:maxsed,1:maxi,1:maxj)
+c sediment-surface (ocn->sed) fluxes; integrated, SedGeM grid
+      real sfxsumsed(0:maxsed,1:maxis,1:maxjs)
+c sediment-surface ocean tracer composition; GOLDSTEIn grid
+      real sfcocn1(0:maxocn,1:maxi,1:maxj)
+c sediment-surface ocean tracer composition; integrated, SedGeM grid
+      real sfcsumocn(0:maxocn,1:maxis,1:maxjs)
+c sediment-surface (sed->ocn) fluxes; SedGeM grid
+      real sfxocn(0:maxocn,1:maxis,1:maxjs)
+c sediment-surface (sed->ocn) fluxes; GOLDSTEIn grid
+      real sfxocn1(0:maxocn,1:maxi,1:maxj)
+c sediment-surface sediment composition; SedGeM grid
+      real sfcsed(0:maxsed,1:maxis,1:maxjs)
+c sediment-surface sediment composition; GOLDSTEIn grid
+      real sfcsed1(0:maxsed,1:maxi,1:maxj)

@@ -1,0 +1,173 @@
+Notes on the new version of simple land starting with the first upload
+of the code onto CVS 7/6/2004.
+
+The new version of the model is very different from the previous version.
+The carbon model has been extended and now couples to physical mechanisms.
+A simple radiation and hydrology scheme has also been added. Parts of the 
+EMBM have also been extended. The model inlcudes a seperate treatment of albedo
+and incorporates seasonal winds.
+
+Other features include an emissions timeseries forcing option and a sea-level
+height change calculation.
+
+4/6/04
+Upload of all genie-simpleland subroutines and data files.
+
+7/6/04
+Upload of all changes in genie-cgoldstein files to allow simpleland to run.
+Upload of plotting routines.
+Upload of manual.
+
+13/7/04
+Inclusion of terrestrial albedo calculation, monthly cloud albedo prescribed 
+dataset derived from NCEP. General tidy of code i.e. removal of unnecessary
+calls and variables. Addition of more model output and update of matlab plotting
+scripts to allow plotting of new output. Inclusion of plotting script for 
+evaporation, transpiration and evapotranspiration fields.
+Manual updated to include albedo scheme and extra plotting options.
+
+9/8/04
+Uploaded tuned k_constants.dat file. This gives land carbon fluxes of 100 GtC/yr
+photosynthesis, 50 GtC/yr vegetation respiration, leaf litter and soil respiration.
+Also gives vegetation carbon reservoir of 550 GtC and 1500 GtC soil carbon when
+in offline mode and pCO2 held at 280 ppmv.
+
+Surflux.F also updated to so Greenland has prescribed ice albedo of 0.8.
+
+17/8/04
+Uploaded matlab script 'canopy_tune.m' to enable easy tuning of canopy conductance
+model if photosynthesis rate is changed in k_constants.dat.
+
+Upload of all necessary files needed to amend or add to the simpleland manual.
+
+18/8/04
+Upload of changes to diaglsimpleosc.F. These include amendments to mains.F and 
+var.simpleland.cmn. The changes are so timeseries of global annual average carbon 
+fluxes and carbon inventories can be plotted including ocean and atmosphere carbon
+inventories. Note this output is printed to .slavgt and only works when ianav is set
+to be the same as nyear in the goldstein goin file.
+
+Upload of new matlab script to allow easy plotting of the .slavgt timeseries.
+
+23/8/04
+Update of simple land manual and figures. 
+
+Upload of short paper about solving for the land temperature in simple land 
+(RevTeX_radland.ps/pdf).
+
+31/8/04
+Upload of change to photosynthesis function. Old function giving a temperature 
+fertilisation under global warming when fractional cover saturated. Solved by not
+allowing photosynthesis to increase past a maximum value when fractional cover tends 
+to 1.
+
+11/10/04 nre
+new version of emissions_timeseries.f written with changes to mains.F and 
+var.simpleland.cmn agrees with old version if emissions at foreward timestep
+used, but now set to use emissions at previous timestep for consistency 
+with timestep calc. SAT still agrees to 6 s.f.
+
+14/12/04
+Several changes/corrections.
+
+Added land ice sheet mask so model does not allow vegetation to grow on ice sheets
+and prescribes an albedo of 0.8 any place land ice is present. Involves reading in
+new data set 'icemask.dat' in gsetlsimple.f and defining new common block 
+'slicemask(i,j)'.
+
+Seperated common blocks in var.simpleland.cmn into seperate integer, real and character.
+
+Correction of mistake in application of sea-ice albedo. Previously surface albedo of 
+sea-ice applied before absorption by air in atmosphere.
+
+15/12/04
+Slight modifcation to the way annaul average files such as *.sland.avg and *.slavgt
+files written. Instead of being an average over the last ianav ocean timesteps they
+are always annual averages but calculated every ianav timesteps. Removes need to 
+write to files so often to produce annual data and so makes code run quicker.
+
+Also included a time stamp written at the end of *.sland.avg files so simpleland_carbon.m
+prints the time that the field was created. 
+
+22/2/05
+Model name changed to ENTS! (Efficient Numerical Terrestrial Scheme).
+
+Minor mistake corrected in mains.F. ENTS now called whenever istep+istep0 is
+divisable by msimpleland.
+
+New diagnostic subroutines for the physical land variables added. These are
+diaglsimplept.f - a subroutine that creates globally averaged timeseries quantities
+also added same timeseries variables but annually averaged in diaglsimpleosc.F.
+
+Corrected minor mistake in inmlsimple.f. Changed
+bcap(i,j)=k9+(k10*Csoil(i,j)) to
+bcap(i,j)=min(k8,k9+(k10*Csoil(i,j))).
+
+Increased numerical precision for the writing of output files.
+
+Increased precision of land temperature calculation from 1 part in 100 to
+i part in 1000.
+
+23/2/05
+Added interpolation of prescribed forcing fields and new formulation for photosynthesis
+and leaf litter.
+
+Added a compile time option -Dfixedveg so model can be used with a fixed terrestrial
+carbon cycle.
+
+Changed names of subroutines to reflect change in model name. These are the name changes:
+diagalsimple.f...............screen_diags.f
+diaglsimpleosc.F.............annav_diags.F
+diaglsimplept.f..............physt_diags.f
+diaglsimplet.f...............carbt_diags.f (also added time label to output subroutine produces)
+goin.simpleland..............ents_config.par
+gsetlsimple.f................setup_ents.F
+inmlsimple.f.................in_ents.f
+outmlsimple.f................out_ents.f
+var.simpleland.cmn...........var_ents.cmn 
+
+28/02/05
+Added Greenland ice sheet melt as a compile time option -Dicemelt.
+When enabled this affects sealevel and has the option to be added 
+as a freshwater flux around Greenland.
+Also moved z0, timepptn, rmax and aero_alb to a new goin file in
+the c-goldstein directory goin_bioents.
+
+04/03/05
+Correction of bug in annav_diags.F. Variables at 
+final timestep before averaging added twice.
+added
+
+17/03/05
+Second correction of bug in annav_diags.F. Missed one variable still being added
+twice (average total ocean carbon).
+
+Annual average arrays now zeroed at initialisation in setup_ents.F.
+
+Removal of cloud albedo field and aero_alb parameter. Replaced with a
+field of atmospheric albedo.
+
+lambda bounded to always be le 1.
+
+Missing array declaration for non seasonal version of model in radfor.F
+added.
+
+11/04/05
+Added minimum value for fv as this term f(Cv) that gets rounded to 0 much
+quicker than Cv. Means that when Cv drops below critcical value (~1e-20 kgC/m2)
+vegetation regrowth impossible. Limiting fv to be >= 1e-5 prevents this happening.
+This was also the cause of the bistability in the model. As it turns out it was 
+numerical bistability unfortunately. This means desert regions are generally green
+and there is only one unique land state under the EMBM for a given set of parameters.
+This also means only one stage spin up is required.
+
+14/04/05
+Removed transpiration from the model as the equations used only suppressed evap
+in the presence of vegetation. This is opposite to the data! Evap. now calculated
+via the usual bulk formula but now features a roughness length parameterisation.
+This is a linear function of vegetation carbon found from regressing data. Result
+is a huge improvement in the evap field, vegetation and soil carbon.
+
+Changed wind field to vertically integrated NCEP winds weighted by the amount of moisture
+at that height after the UVic group. The wind fields are in fact the UVic ones except regridded
+to the goldstein grid.

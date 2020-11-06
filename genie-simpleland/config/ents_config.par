@@ -1,0 +1,14 @@
+5                                   msimpleland 
+0.05                                Cveg_ini
+0.05                                Csoil_ini
+-25.0				    Cveg_ini_13 (d13C in permil)
+0.0				    Cveg_ini_14 (D14C in permil)
+-25.0				    Csoil_ini_13
+0.0				    Csoil_ini_14
+0                                   orogswitch (0=off 1=on)
+1                                   snowswitch (0=off 1=on)
+0                                   offlineswitch (0=coupled 1=offline)
+1                                   seasonswitch (0=ann. av. 1=seasonal fields)
+n                                   include emissions (y or n)
+0                                   Use(=1) or don't use(=0) a DIFFERENT land restart file
+     ../results/tst/ofl.1.sland     DIFFERENT restart dump input file relative to executable location

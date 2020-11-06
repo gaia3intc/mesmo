@@ -1,0 +1,15 @@
+! *************************************************************************************************
+! gemlite_config.dat
+! INPUT PARAMETER FILE
+! *************************************************************************************************
+
+-START-OF-DATA-
+*** INTEGRATION CONTROL ***
++0.000E+04               Time interval of non-accelerated 'normal' mode operation (yr)
++8.000E+04               Time interval of accelerated geochemistry (yr)
+500                      number of time steps between atm-ocn-sed re-equilibrium
+10                       number of time steps between recalculating forcings
+*** I/O ***
+010000                   number of time steps between status updates
+f                        debug Gemlite (t/f T/F)?
+-END-OF-DATA-

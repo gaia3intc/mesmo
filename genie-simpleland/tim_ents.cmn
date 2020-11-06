@@ -1,0 +1,34 @@
+c     for time-varying co2,orog, and icefrac:
+
+      integer ntimes_max
+      parameter (ntimes_max=50)
+
+      character*200 filenameco2
+      character*200 filenameorog
+      character*200 filenamelice
+      character*200 filenameorbit
+ckst      character*200 junk
+      integer t_co2,nco2,co2steps
+      integer t_orog,norog,orogsteps
+      integer t_lice,nlice,licesteps
+      integer t_orbit,norbit,orbitsteps
+      real co2_vect(ntimes_max)
+      real orog_vect(maxi,maxj,ntimes_max)
+      real lice_vect(maxi,maxj,ntimes_max)
+      real orbitecc_vect(ntimes_max)
+      real orbitobl_vect(ntimes_max)
+      real orbitpre_vect(ntimes_max)
+      real orbittau_vect(ntimes_max)
+
+      common/time_vary/
+     &                  co2_vect,orog_vect,lice_vect,
+     &                  orbitecc_vect,
+     &                  orbitobl_vect,
+     &                  orbitpre_vect,
+     &                  orbittau_vect,
+     &                  t_co2,nco2,co2steps,
+     &                  t_orog,norog,orogsteps,
+     &                  t_lice,nlice,licesteps,
+     &                  t_orbit,norbit,orbitsteps,
+     &                  filenameco2,filenameorog,
+     &                  filenamelice,filenameorbit

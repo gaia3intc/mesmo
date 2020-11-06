@@ -1,0 +1,10 @@
+9 May 2012
+
+Stop reading in k constants from k_constants.dat in this directory.
+
+These are input parameters, so better to not have them hardwired.
+I put these as "ents_k.dat" under ../batch_input/EXPID/
+
+Modified setup_ents.F
+
+
