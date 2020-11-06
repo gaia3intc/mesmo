@@ -1,0 +1,40 @@
+! *******************************************************************************************************************
+! biogem_bio_1N1T_PO4restore_config.par
+! INPUT PARAMETER FILE
+! *******************************************************************************************************************
+
+-START-OF-DATA-
+------------------- BIOLOGICAL NEW PRODUCTION -----------------------------------------------------------------------
+F                   Light limitation?                                                               [T]
+------------------- ORGANIC MATTER EXPORT RATIOS --------------------------------------------------------------------
+16.0                N/P organic matter Redfield ratio                                               [16.0]
+117.0               C/P organic matter Redfield ratio                                               [117.0]
+-170.0              O2/P organic matter pseudo-Redfield ratio                                       [-170.0]
+-1.00               ALK/N alkalinty correction factor                                               [-1.00]
+0.66                fraction of export production in the form of DOC (rather than POC)              [0.66]
+------------------- INORGANIC MATTER EXPORT RATIOS ------------------------------------------------------------------
+2.1500778E-02       CaCO3/POC: base export ratio                                                    [2.1500778E-02]
+1.279333            CaCO3/POC: power for saturation-dependent modifier of base ratio                [1.279333]
+------------------- REMINERALIZATION --------------------------------------------------------------------------------
+0.5                 DOC lifetime (yrs)                                                              [0.5]
+125.0               prescribed particle sinking rate (m d-1)                                        [0.5]
+T                   fixed-profile POM remineralization (t/f T/F)?                                   [t]
+5.4554138E-02       initial fraction of POM present as type #2                                      [5.4554138E-02]
+556.4427            e-folding (remineralization) depth of POM fraction #1 (m)                       [556.4427]
+1000000.0           e-folding (transformation) depth of POM fraction #2 (m)                         [1000000.0]
+T                   fixed-profile CaCO3 remineralization (t/f T/F)?                                 [t]
+0.4882946           initial fraction of CaCO3 present as type #2                                    [0.4882946]
+1055.525            e-folding (remineralization) depth of CaCO3 fraction #1 (m)                     [1055.525]
+1000000.0           e-folding (transformation) depth of CaCO3 fraction #2 (m)                       [1000000.0]
+-END-OF-DATA-
+
+/\                  /\                                                                              /\
+VALUE               BORING WORDY DESCRIPTION                                                        DEFAULT VALUE
+
+NOTES
+-----
+>> brackets [] contain the default values as per the calibration of Ridgwell et al. [in prep],
+   assuming; initial ocean DIC (2.257E-03 mol kg-1) and ALK (2.348E-03 mol kg-1) [Key et al., 2004]
+>> Redfield et al. [1963] ratio linking P:N:C:O2 is 1:16:106:-138,
+   here we are assuming Anderson and Sarmiento [1994]; 1:16:117:-170
+>> restoring constant is defined in /genie-data/gem_config_ocn.par

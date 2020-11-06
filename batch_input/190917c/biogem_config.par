@@ -1,0 +1,100 @@
+! *******************************************************************************************************************
+! biogem_config.par
+! INPUT PARAMETER FILE
+! *******************************************************************************************************************
+
+-START-OF-DATA-
+------------------- BIOLOGICAL NEW PRODUCTION - BIOLOGICAL SCHEME SELECTION OPTIONS (last .TRUE. accepted) ----------
+f                   1N1T PO4 restore (t/f T/F)?                                                     [f]
+f                   1N1T PO4 Michaelis Menton (t/f T/F)?                                            [f]
+f                   2N1T PO4 Michaelis Menton + SiO2 (2 nuts = P and Si) (t/f T/F)?                 [t]
+f                   3N1T P,N,C-colimit Michaelis Menton (3 nuts=P,N,C)         	                    [t]
+f                   4N1T P,N,C-colimit Michaelis-Menton + SiO2 (4 nuts=P,N,C,Si) (t/f T/F)?         [f]
+f                   5N1T P,N,C,Fe-colimit Michaelis-Menton + SiO2 (5 N=P,N,C,Si and Fe) (t/f T/F)?  [f]
+f                   5N2T P,N,C,Fe-colimit Michaelis-Menton + SiO2 (5 N=P,N,C,Si and Fe,large and small) (t/f T/F)?  [f]
+t                   5NXT P,N,C,Fe-colimit Michaelis-Menton + SiO2 (5 N, 2 or 3 T) (t/f T/F)?        [t]
+------------------- Katsumi's variables -----------------------------------------------------------------------------
+T		    LMTBtau (or use predefined optimal nutrient uptake or max growth rate)          [f]
+0.04109589          optimal nutrient uptake time scale (par_taut: yr-1  default = 15d)              [0.04109589]
+2                   Number of layers above critical depth (integer)                                 [1]
+0.0		    nitrogen fixation? (real not integer; 0.0=no, 1.0=yes)	 		    [0.0]
+0.0		    river flux of anthropogenic nitrogen? (real not integer; 0.0=no, 1.0=yes)	    [1.0]
+0.0		    river flux of anthropogenic alkalinity? (real not integer; 0.0=no, 1.0=yes)	    [0.0]
+0.0		    river flux of anthropogenic carbon? (real not integer; 0.0=no, 1.0=yes)	    [0.0]
+------------------- MESMO3 Features --------------------- -----------------------------------------------------------
+f                   Temperature and NPP dependent Particle export ratio (t/f T/F)?                  [T]
+T                   O2 depedendent remineralization (t/f T/F)?                                      [T]
+T                   Prognositc N2 fixation and denitrificaion-needs 3 phyto types (t/f T/F)?        [T]
+F                   Flexible C:N:P Pahlow model (t/f T/F)?                                          [F]
+T                   Flexible C:N:P Power-law model (t/f T/F)?                                       [T]
+F                   Flexible C:N:P Galbratih and Martiny (2015) model (t/f T/F)?                    [F]
+F                   Fixed Redfield C:N:P (t/f T/F)?                                                 [F]
+T                   Flexible -O2:C remineralization ratios (t/f T/F)?                               [T]
+------------------- Production MASKS -------------------- -----------------------------------------------------------
+f                   Production (or P uptake) mask (t/f T/F)?                                        [F]
+f                   CaCO3 or PIC production mask (t/f T/F)?                           		    [F]
+f                   Diatom Si:N uptake ratio mask (t/f T/F)?            			    [F]
+f                   C:N:P stoichiometry mask (t/f T/F)?                           		    [F]
+f                   Community composition mask (t/f T/F)?                                           [F]
+------------------- CLOSURE CONTROL OF OCEAN CARBON CYCLE -----------------------------------------------------------
+t                   enable particulate rain flux to sediments (else return to ocean) (t/f T/F)?     [f]
+t                   set dissolution flux = rain flux to close system (if above is 'true')?          [f]
+0.0                 global CaCO3 weathering rate (mol yr-1)                                         [0.0]
+0.0	            global silicate weathering rate (mol yr-1)                                      [0.14E13/0.3610E13]
+0.0                 d13C of weathered CaCO3 (o/oo)                                                  [0.0]
+0.0	            global 30Si weathering rate (mol yr-1)                                          [0.0047E13/0.27E13]
+------------------- MISC CONTROLS -----------------------------------------------------------------------------------
+f                   enable temperature and/or salinity forcing of climate (t/f T/F)?                [f]
+f                   replace internal (c-goldstein) fractional sea-ice cover field (t/f T/F)?        [f]
+f                   replace internal (c-goldstein) wind-speed field (t/f T/F)?                      [t]
+f                   replace internal (biogem) CaCO3:POC export rain ratio? (t/f T/F)?               [f]
+0.310               gas transfer parameterization coefficient 'a'; adjusted by 0.73 - Sweeney       [0.310; Wanninkhof]
+------------------- I/O - TIME-SLICES -------------------------------------------------------------------------------
+t                   time-slice data save? (t/f T/F): atmospheric (interface) composition	    [f]
+t                   time-slice data save? (t/f T/F): ocean composition			            [t]
+f                   time-slice data save? (t/f T/F): sediment (interface) composition	            [f]
+t                   time-slice data save? (t/f T/F): ocean-atmosphere flux		            [t]
+t                   time-slice data save? (t/f T/F): ocean-sediment flux			    [f]
+f                   time-slice data save? (t/f T/F): sediment-ocean flux			    [f]
+t                   time-slice data save? (t/f T/F): 'biological' fluxes                            [t]
+t                   time-slice data save? (t/f T/F): aqueous carbonate system properties	    [t]
+f                   time-slice data save? (t/f T/F): aqueous carbonate system constants	            [f]
+t                   time-slice data save? (t/f T/F): atmospheric 'physical' properties	            [f]
+t                   time-slice data save? (t/f T/F): ocean 'physical' properties		    [f]
+t                   time-slice data save? (t/f T/F): miscellaneous properties		            [t]
+1.0               time-slice integration interval (yr) (+ default time-slice save interval)       [1.0]
+f		    save time-slice data as ASCII (in addition to netCDF)?                          [f]
+------------------- I/O - TIME-SERIES -------------------------------------------------------------------------------
+t                   time-series data save? (t/f T/F): atmospheric (interface) composition	    [t]
+t                   time-series data save? (t/f T/F): oceanic composition			    [t]
+t                   time-series data save? (t/f T/F): export flux			            [t]
+f                   time-series data save? (t/f T/F): sediment (interface) composition	            [f]
+t                   time-series data save? (t/f T/F): ocean-atmosphere flux		            [t]
+t                   time-series data save? (t/f T/F): ocean->sediment flux			    [f]
+f                   time-series data save? (t/f T/F): sediment->ocean flux		            [f]
+t                   time-series data save? (t/f T/F): ocean surface tracers		            [t]
+t                   time-series data save? (t/f T/F): ocean surface carbonate chemistry	            [t]
+t                   time-series data save? (t/f T/F): miscellaneous properties		            [t]
+1.0               time-series integration interval (yr) (+ default time-slice save interval)      [1.00]
+f		    save time-series data as ASCII (in addition to netCDF)?                         [f]
+------------------- I/O - MISC --------------------------------------------------------------------------------------
+f                   save 'derived' data (e.g., salinity-normalized ocean tracers)? (t/f T/F)        [f]
+t                   save global diagnostics (at time-slice intervals) (ASCII-only)? (t/f T/F)       [t]
+------------------- TRACER AUDITING AND DEBUGGING OPTIONS -----------------------------------------------------------
+t                   'audit' tracers (t/f T/F)? [GOOD IDEA WHEN CARRYING OUT MODEL DEVELOPMENT]      [f]
+f                   halt program upon audit failure (t/f T/F)                                       [t]
++1.000E-03          tracer audit action threshold (as a relative fraction)                          [+1.000E-08]
+f                   debug; report main program processes? (t/f T/F)                                 [f]
+f                   debug; report main loop process stage at specified (i,j) location?              [f]
+f                   debug; report main loop process stage at ALL (i,j) locations? (t/f T/F)         [f]
+f                   debug; report run-time warnings? (t/f T/F)                                      [f]
+04                  'i' index value for debug reporting                                             [01]
+28                  'j' index value for debug reporting                                             [03]
+1.0		    temperature weighting factor for production					    [1.0]
+-END-OF-DATA-
+
+/\                  /\                                                                              /\
+VALUE               BORING WORDY DESCRIPTION                                                        DEFAULT
+
+NOTES
+-----
