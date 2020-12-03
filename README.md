@@ -7,6 +7,7 @@ The MN Earth System Model for Ocean Biogeochemistry (MESMO) has undergone numero
 
 
 190917a: Standard MESMO 3 run (previously mistakenly wrote that 190917c was the std model)
+
 201027c: MESMO 3 with refractory DOM (DOMr) activated.
 
 To continue from these two runs requires the model state at the end of those runs. That is provided in /results. However, one file is missing from each of the 190917c and 201027c due to file size (100 MB) restriction of github. The missing files are 190917c.season.1 and 201027c.season.1, which are ~102 MB.
