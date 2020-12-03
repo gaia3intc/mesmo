@@ -1,0 +1,21 @@
+ ! NOAA/PMEL TMAP
+ ! FERRET v6.82  
+ ! Linux 2.6.32-279.1.1.el6.x86_64 64-bit - 08/03/12
+ ! 27-Feb-20 19:57     
+
+use fields_biogem_3d.nc
+sho d
+set win 1
+plot/l=11/k=2 cc_x,opal_x
+plot/l=11/k=2/vs cc_x,opal_x
+spawn xterm&
+set mode metafile
+set v ul
+plot/l=11/vs npp_m2_lg[k=1:2@sum], opal_x
+plot/l=11/vs npp_m2_lg[k=1:2@sum], opal_x[k=2]
+set v ur; plot/l=11/vs npp_m2_lg[k=1:2@sum], cc_x[k=2]
+set v ll; plot/l=11/vs opal_x, cc_x[k=2]
+set v ll; plot/l=11/vs opal_x[k=2], cc_x[k=2]
+ppl clsplt
+spawn plt2pdf metafile.plt m3_190917a_cc_opal_poc.pdf
+spawn pwd

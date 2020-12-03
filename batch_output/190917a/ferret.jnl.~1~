@@ -1,0 +1,11 @@
+ ! NOAA/PMEL TMAP
+ ! FERRET v6.82  
+ ! Linux 2.6.32-279.1.1.el6.x86_64 64-bit - 08/03/12
+ !  7-Oct-19 15:16     
+
+use fields_physics.nc
+ls
+sho d
+list airt[x=1]
+list airt[x=1,l=1]
+q
