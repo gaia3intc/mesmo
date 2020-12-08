@@ -1418,6 +1418,7 @@ CONTAINS
            if (loc_bio_uptake(io_N2) > const_real_nullsmall) then
                loc_bio_uptake(io_O2) = loc_bio_uptake(io_O2) + (5.0/2.0)*loc_bio_uptake(io_N2)
                loc_bio_uptake(io_NO3) = loc_bio_uptake(io_NO3) - 2.0*loc_bio_uptake(io_N2)
+               loc_bio_uptake(io_ALK) = loc_bio_uptake(io_ALK) + 2.0*loc_bio_uptake(io_N2)         ! 12/2020 Nfix/denit on ALK
                Nfix_Diaz(dum_i,dum_j,k) = 2.0*loc_bio_uptake(io_N2)*phys_ocn(ipo_M,dum_i,dum_j,k)  ! N2 fixation in terms of NO3 in molN 
            else
                Nfix_Diaz(dum_i,dum_j,k) = 0.0
@@ -1895,6 +1896,7 @@ CONTAINS
           loc_bio_remin(io_DIC,k)   = loc_bio_remin(io_DIC,k)   + ocn(io_DOM_C,dum_i,dum_j,k) - loc_DOM_C_min
           loc_bio_remin(io_DOM_N,k) = loc_bio_remin(io_DOM_N,k) - ocn(io_DOM_N,dum_i,dum_j,k) + loc_DOM_N_min
           loc_bio_remin(io_NO3,k)   = loc_bio_remin(io_NO3,k)   + ocn(io_DOM_N,dum_i,dum_j,k) - loc_DOM_N_min
+          loc_bio_remin(io_ALK,k)   = loc_bio_remin(io_ALK,k)   - ocn(io_DOM_N,dum_i,dum_j,k) + loc_DOM_N_min  ! 12/2020 Nfix/denit on ALK
           loc_bio_remin(io_DOM_P,k) = loc_bio_remin(io_DOM_P,k) - ocn(io_DOM_P,dum_i,dum_j,k) + loc_DOM_P_min
           loc_bio_remin(io_PO4,k)   = loc_bio_remin(io_PO4,k)   + ocn(io_DOM_P,dum_i,dum_j,k) - loc_DOM_P_min
 
@@ -2529,9 +2531,10 @@ CONTAINS
               loc_NO3_remin = -loc_NO3
           endif
               loc_bio_remin(io_NO3,k) =  loc_bio_remin(io_NO3,k) + loc_NO3_remin
-              loc_bio_remin(io_N2,k)  = loc_bio_remin(io_N2,k) -  0.5*loc_NO3_remin 
-              loc_bio_remin(io_O2,k)  = loc_bio_remin(io_O2,k) -  (2.5/2.0)*loc_NO3_remin
-              den_ocn(dum_i,dum_j,k) = -loc_NO3_remin*phys_ocn(ipo_M,dum_i,dum_j,k) ! molN
+              loc_bio_remin(io_N2,k)  =  loc_bio_remin(io_N2,k)  - 0.5*loc_NO3_remin
+              loc_bio_remin(io_ALK,k) =  loc_bio_remin(io_ALK,k) - loc_NO3_remin       ! 12/2020 Nfix/denit on ALK
+              loc_bio_remin(io_O2,k)  =  loc_bio_remin(io_O2,k)  - (2.5/2.0)*loc_NO3_remin
+              den_ocn(dum_i,dum_j,k)  = -loc_NO3_remin*phys_ocn(ipo_M,dum_i,dum_j,k) ! molN
        else
           den_ocn(dum_i,dum_j,k) = 0.0
        endif
