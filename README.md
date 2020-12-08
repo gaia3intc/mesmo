@@ -6,7 +6,8 @@ katsumi@umn.edu
 The MN Earth System Model for Ocean Biogeochemistry (MESMO) has undergone numerous revisions over the years. The first version MESMO1 was described in a GMD paper (Matsumoto et al., 2008). As noted by Matsumoto et al. (2008), MESMO is derived originally from GENIE-1, which is composed of the physical model of Edwards & Marsh (2005) and biogeochemistry model of Ridgwell et al. (2007). In another GMD paper, Matsumoto et al. (2013) describe the second version, MESMO2. These two papers provide comprehensive model description up to 2013. Then, Tanioka & Matsumoto (2017) introduced the power law model of phytoplankton applied for the case of two phytoplankton types. Matsumoto et al. (2020) expanded the power law model to three phytoplankton types with additional modifications. MESMO3, the third version, is now being described in a new GMD paper.
 
 
-190917c: Standard MESMO 3 run
+190917a: Standard MESMO 3 run (previously mistakenly wrote that 190917c was the std model)
+
 201027c: MESMO 3 with refractory DOM (DOMr) activated.
 
 To continue from these two runs requires the model state at the end of those runs. That is provided in /results. However, one file is missing from each of the 190917c and 201027c due to file size (100 MB) restriction of github. The missing files are 190917c.season.1 and 201027c.season.1, which are ~102 MB.
