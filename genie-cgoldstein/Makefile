@@ -1,10 +1,12 @@
-# change maxk=8/16 in var.cmn to compile 8-level or 16 level model
+# 12/2020 clean up...such a mess
+# changes made in git branch work
+# changes made in git branch master
+
 .SUFFIXES: .o .f .f90
 
 NETCDFLIB = /soft/netcdf/4.0.1.intel/lib
 NETCDFINC = /soft/netcdf/4.0.1.intel/include
 LDFLAGS = -L$(NETCDFLIB) -I$(NETCDFINC) -lnetcdf
-#LDFLAGS = -l$(NETCDFLIB) -l$(NETCDFINC) -lnetcdf
 
 .F.o:
 	$(FC) $(FLAGS) $(DOPTS) -c $*.F $(LDFLAGS)
