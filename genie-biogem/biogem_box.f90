@@ -2178,8 +2178,9 @@ CONTAINS
                 if (sed_select(is_CaCO3)) then
                    If (.NOT. opt_bio(iopt_bio_remin_CaCO3_fixed)) then                           !usually done
                       ! by M.Chiamoto 2006-07-06
-                      ktemp = log(2.0)/(10.)                           ! Eppley (1972) =.069
-                      r0    = par_bio_remin_CaCO3_K * conv_yr_d        ! 0.05 /day Yamanaka et al. (2004) {= decomposition rate of CaCO3 at 0C}
+!                      ktemp = log(2.0)/(10.)                           ! Eppley (1972) =.069
+                      ktemp = (-1)*log(2.0)/(10.)                      ! change sign; CaCO3 dissolves faster in colder waters
+                      r0    = par_bio_remin_CaCO3_K * conv_yr_d        ! 0.05 /day Yamanaka et al. (2004); {decomposition rate of CaCO3 at 0C}
                       loc_bio_remin_CaCO3_frac1 = loc_bio_remin_dt*r0 &
                            & * en_tempwt_remin*exp(ktemp*(ocn(io_T,dum_i,dum_j,kk)-273.15))
 #ifdef reminTconst
