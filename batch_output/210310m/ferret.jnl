@@ -1,0 +1,18 @@
+ ! NOAA/PMEL TMAP
+ ! FERRET v6.82  
+ ! Linux 2.6.32-279.1.1.el6.x86_64 64-bit - 08/03/12
+ ! 12-Mar-21 22:48     
+
+use ts_biogem_series.nc
+plot docr
+plot docr, doc
+sha/l=6/k=1 doct
+sha/l=6/k=1 (doc+docr)*1e6
+use fields_biogem_3d.nc
+sha/l=6/k=1 (doc+docr)*1e6
+go analyze_docr
+plot/l=6 doct[x=@ave,y=@ave]
+go analyze_units
+plot/l=6 doct[x=@ave,y=@ave]
+plot/l=6 docr[x=@ave,y=@ave]
+exit

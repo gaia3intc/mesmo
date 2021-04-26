@@ -1,0 +1,10 @@
+ ! NOAA/PMEL TMAP
+ ! FERRET v6.82  
+ ! Linux 2.6.32-279.1.1.el6.x86_64 64-bit - 08/03/12
+ ! 15-Mar-21 17:14     
+
+use ts_biogem_series.nc
+plot (doc+docr)*1e6
+plot doc*1e6
+plot doc_1*1e6
+exit
