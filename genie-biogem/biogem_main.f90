@@ -647,6 +647,17 @@ SUBROUTINE tstep_biogem(dum_t,  &
      locij_focnsed(is,:,:) = 0.0
   end do
 
+! MG 07/2022 MESMO 3c start
+  DOCr_photodeg(:,:,:) = 0.0
+  DOCr_vent_deg(:,:,:) = 0.0
+  DOCr_bk_deg(:,:,:) = 0.0
+  DOCr_bkg_deg(:,:,:) = 0.0 
+  DOC_deg(:,:,:) = 0.0 
+  DOC_prod_split1(:,:,:) = 0.0 
+  DOCr_prod_split2(:,:,:) = 0.0
+  DOCsl_prod_split2(:,:,:) = 0.0
+! MG 07/2022 MESMO 3c end
+
   land_ice_mask(:,:) = dum_lndicemask(:,:)
   ! *** CALCULATE GEM TIME ***
   ! update gemchemical model time
@@ -1842,6 +1853,23 @@ end if
                 int_nfix_sig = int_nfix_sig + SUM(Nfix_Diaz(:,:,:)) ! N2 fixation
                 int_denit_sig = int_denit_sig + SUM(den_ocn(:,:,:)) ! Denitrification
             END SELECT    
+
+! MG 07/2022 MESMO 3c start
+! Calculating DOCr degradation globally
+            int_DOCr_photodeg_sig = int_DOCr_photodeg_sig + SUM(DOCr_photodeg(:,:,:)*1027*phys_ocn(ipo_V,:,:,:))
+            int_DOCr_vent_deg_sig = int_DOCr_vent_deg_sig + SUM(DOCr_vent_deg(:,:,:)*1027*phys_ocn(ipo_V,:,:,:))
+            int_DOCr_bk_deg_sig = int_DOCr_bk_deg_sig + SUM(DOCr_bk_deg(:,:,:)*1027*phys_ocn(ipo_V,:,:,:))
+            int_DOCr_bkg_deg_sig = int_DOCr_bkg_deg_sig + SUM(DOCr_bkg_deg(:,:,:)*1027*phys_ocn(ipo_V,:,:,:))
+! Calculating DOC degradation globally 
+            int_DOC_deg_sig = int_DOC_deg_sig + SUM(DOC_deg(:,:,:)*1027*phys_ocn(ipo_V,:,:,:))
+! Calculating DOCt production from NPP
+            int_DOC_prod_split1_sig = int_DOC_prod_split1_sig + SUM(DOC_prod_split1(:,:,:)*1027*phys_ocn(ipo_V,:,:,:))
+! Calculating DOCr production from deep POC split
+            int_DOCr_prod_split2_sig = int_DOCr_prod_split2_sig + SUM(DOCr_prod_split2(:,:,:))
+! Calculating DOCsl production from deep POC split
+            int_DOCsl_prod_split2_sig = int_DOCsl_prod_split2_sig + SUM(DOCsl_prod_split2(:,:,:))
+! MG 07/2022 MESMO 3c end
+
 ! Calculating NPP globally Tata 190612            
             int_NPP_sig = int_NPP_sig + SUM(NPP_ocn(:,:,:)) ! Net-primary productivity Tata 180425
             int_NPP_inP_sig = int_NPP_inP_sig + SUM(NPP_ocn_inP(:,:,:)) ! NPP in P Tata 190624
@@ -2182,11 +2210,21 @@ end if
        int_denit_timeslice(:,:,:) = int_denit_timeslice(:,:,:) + den_ocn(:,:,:) ! Nfixation Tata 180221
        int_NPP_timeslice(:,:,:) = int_NPP_timeslice(:,:,:) + NPP_ocn(:,:,:) ! NetPP Tata 180425
        int_NPP_inP_timeslice(:,:,:) = int_NPP_inP_timeslice(:,:,:) + NPP_ocn_inP(:,:,:) ! NetPP in P Tata 190624
+! MG 07/2022 MESMO 3c start
+       int_DOCr_photodeg_timeslice(:,:,:) = int_DOCr_photodeg_timeslice(:,:,:) + DOCr_photodeg(:,:,:) !MG 01/11/22 
+       int_DOCr_vent_deg_timeslice(:,:,:) = int_DOCr_vent_deg_timeslice(:,:,:) + DOCr_vent_deg(:,:,:) !MG 01/21/22
+       int_DOCr_bk_deg_timeslice(:,:,:) = int_DOCr_bk_deg_timeslice(:,:,:) + DOCr_bk_deg(:,:,:) !MG 01/21/22 
+       int_DOCr_bkg_deg_timeslice(:,:,:) = int_DOCr_bkg_deg_timeslice(:,:,:) + DOCr_bkg_deg(:,:,:) !MG 01/24/22
+       int_DOC_deg_timeslice(:,:,:) = int_DOC_deg_timeslice(:,:,:) + DOC_deg(:,:,:) !MG 02/21/22         
+       int_DOC_prod_split1_timeslice(:,:,:) = int_DOC_prod_split1_timeslice(:,:,:) + DOC_prod_split1(:,:,:) !MG 03/16/22
+       int_DOCr_prod_split2_timeslice(:,:,:) = int_DOCr_prod_split2_timeslice(:,:,:) + DOCr_prod_split2(:,:,:) !MG 03/16/22
+       int_DOCsl_prod_split2_timeslice(:,:,:) = int_DOCsl_prod_split2_timeslice(:,:,:) + DOCsl_prod_split2(:,:,:) !MG 03/16/22
+! MG 07/2022 MESMO 3c end
 
        DO ix = 1,par_bio_numspec
-        int_bio_settle_x_timeslice(ix,:,:,:) = int_bio_settle_x_timeslice(ix,:,:,:) + bio_settle_x(ix,:,:,:) ! Tata 171030
-        int_NPP_x_timeslice(ix,:,:,:) = int_NPP_x_timeslice(ix,:,:,:) + NPP_ocn_x(ix,:,:,:) ! Tata 190612
-        int_NPP_x_inP_timeslice(ix,:,:,:) = int_NPP_x_inP_timeslice(ix,:,:,:) + NPP_ocn_x_inP(ix,:,:,:) ! Tata 190624
+          int_bio_settle_x_timeslice(ix,:,:,:) = int_bio_settle_x_timeslice(ix,:,:,:) + bio_settle_x(ix,:,:,:) ! Tata 171030
+          int_NPP_x_timeslice(ix,:,:,:) = int_NPP_x_timeslice(ix,:,:,:) + NPP_ocn_x(ix,:,:,:) ! Tata 190612
+          int_NPP_x_inP_timeslice(ix,:,:,:) = int_NPP_x_inP_timeslice(ix,:,:,:) + NPP_ocn_x_inP(ix,:,:,:) ! Tata 190624
        end do
 
        int_bio_remin_timeslice(:,:,:,:)  = int_bio_remin_timeslice(:,:,:,:)  + bio_remin(:,:,:,:)

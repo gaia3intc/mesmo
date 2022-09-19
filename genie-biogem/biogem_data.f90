@@ -349,7 +349,15 @@ CONTAINS
     READ(in,fmt='(L1)') DOCR_VENT_FLAG      ! Flag to enable hydrothermal vent degradation
     READ(in,fmt='(L1)') DOCR_DEEPPOCSPLIT   ! Flag to enable POC split to DOC and DIC at depth
     READ(in,fmt='(L1)') DOCR_ACC_VENT_DECAY ! Flag to enable accelerated C14 decay (to simulate old vent reservoir)
-   
+
+!MG flags - 4 flags that need to be addedd to biogem_bio_5NXT_PNCFeMM_SiO2_config.par
+    READ(in,fmt='(1X)')
+    READ(in,fmt='(L1)') DOCSL_TEMP_FLAG                 ! Flag to enable temperature-dependent DOCSL lifetime
+    READ(in,fmt='(L1)') DOCRPHOTO_TEMP_FLAG             ! Flag to enable binary temperature-dependent DOCR photodegradation lifetime following Porcal et al 2015
+    READ(in,fmt='(L1)') DOP_PREFREMIN_FLAG              ! Flag to preferentially remineralize DOP over other DOM species             
+    READ(in,fmt='(L1)') DOPR_PREFREMIN_FLAG             ! Flag to preferentially remineralize DOPR over other DOMR species 
+!MG flags
+    
     ! CLOSURE CONTROL OF OCEAN CARBON CYCLE
     READ(in,fmt='(1X)') 
     READ(in,fmt='(L1)') opt_misc(iopt_misc_sed_select) 
@@ -525,6 +533,16 @@ CONTAINS
     int_NPP_x_inP_timeslice(:,:,:,:) = 0.0 ! NetPP in P for species Tata 190624
     int_denit_timeslice(:,:,:) = 0.0 ! Denitrification Tata 180221
     int_DOMfrac_timeslice(:,:,:) = 0.0 ! Tata 180423
+! MG 07/2022 MESMO 3c start
+    int_DOCr_photodeg_timeslice(:,:,:) = 0.0 ! MG 01/11/22
+    int_DOCr_vent_deg_timeslice(:,:,:) = 0.0 ! MG 01/21/22
+    int_DOCr_bk_deg_timeslice(:,:,:) = 0.0 ! MG 01/21/22
+    int_DOCr_bkg_deg_timeslice(:,:,:) = 0.0 ! MG 01/24/22
+    int_DOC_deg_timeslice(:,:,:) = 0.0 ! MG 03/07/22  
+    int_DOC_prod_split1_timeslice(:,:,:) = 0.0 ! MG 03/16/22
+    int_DOCr_prod_split2_timeslice(:,:,:) = 0.0 ! MG 03/16/22
+    int_DOCsl_prod_split2_timeslice(:,:,:) = 0.0 ! MG 03/16/22
+! MG 07/2022 MESMO 3c end    
 #ifdef stoich
     int_POP_POC_timeslice(:,:,:)        = 0.0  !TaTa 06/03/15
     int_PON_POC_timeslice(:,:,:)        = 0.0  !TaTa 06/03/15
@@ -624,6 +642,16 @@ CONTAINS
     int_NPP_inP_sig = 0.0 ! tata 190624
     int_NPP_x_sig(:) = 0.0 ! tata 190612
     int_NPP_x_inP_sig(:) = 0.0 ! tata 190624
+! MG 07/2022 MESMO 3c start
+    int_DOCr_photodeg_sig = 0.0 ! MG 01/11/22
+    int_DOCr_vent_deg_sig = 0.0 ! MG 01/21/22
+    int_DOCr_bk_deg_sig = 0.0 ! MG 01/21/22
+    int_DOCr_bkg_deg_sig = 0.0 ! MG 01/24/22
+    int_DOC_deg_sig = 0.0 ! MG 03/07/22
+    int_DOC_prod_split1_sig = 0.0 ! MG 03/16/22
+    int_DOCr_prod_split2_sig = 0.0 ! MG 03/16/22
+    int_DOCsl_prod_split2_sig = 0.0 ! MG 03/16/22
+! MG 07/2022 MESMO 3c end
 #ifdef stoich
     int_CtoP_sig = 0.0      ! TaTa 11/04/15
     int_CtoP_lg_sig = 0.0      ! TaTa 11/04/15
@@ -971,6 +999,19 @@ end select
        READ(in,fmt=*) ventflux
        READ(in,fmt=*) par_bio_remin_DOMRvent
        READ(in,fmt=*) par_bio_remin_DOMRvent_14C_facc
+! MG 07/2022 MESMO 3c start
+       READ(in,fmt=*) par_bio_prefremin_DOPr_factor
+       READ(in,fmt=*) par_bio_prefremin_DONr_factor
+       READ(in,fmt=*) par_bio_prefremin_DOPsl_factor
+       READ(in,fmt=*) par_bio_prefremin_DONsl_factor
+       READ(in,fmt=*) par_bio_laws_fudge
+       READ(in,fmt=*) par_bio_dunne_factor
+       READ(in,fmt=*) par_bio_dunne_tempfactor
+       READ(in,fmt=*) par_bio_Eppley_a
+       READ(in,fmt=*) par_bio_Eppley_k
+       READ(in,fmt=*) par_bio_tauphoto_a
+       READ(in,fmt=*) par_bio_tauphoto_k
+! MG 07/2022 MESMO 3c end
 !       READ(in,fmt=*) dilution_threshold
 !!!DOCR ADDITION!!!
        READ(in,fmt=*) par_bio_remin_sinkingrate 

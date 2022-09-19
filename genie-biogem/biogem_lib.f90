@@ -94,7 +94,6 @@ MODULE biogem_lib
   INTEGER,PARAMETER::ipoa_u                               = 08    ! surface wind speed (m s-1)
   INTEGER,PARAMETER::ipoa_seaice                          = 09    ! fractional seaice cover  = goldstein varice(2,:,:)
   INTEGER,PARAMETER::ipoa_solfor                          = 10    ! solar forcing (W m-2)
-!kst atmoutput: added the indexes for the 7 new descriptors
   INTEGER,PARAMETER::ipoa_relh                            = 11    ! relative humidity
   INTEGER,PARAMETER::ipoa_pptn                            = 12    ! precipitation
   INTEGER,PARAMETER::ipoa_evap                            = 13    ! evaporation
@@ -171,9 +170,6 @@ MODULE biogem_lib
   INTEGER,PARAMETER::iopt_force_seaice                    = 03    ! over-write cgoldstein fractional sea-ice?
   INTEGER,PARAMETER::iopt_force_windspeed                 = 04    ! over-write cgoldstein reconstructed wind-speed?
   INTEGER,PARAMETER::iopt_force_CaCO3toPOCrainratio       = 05    ! over-write biogem CaCO3:POC export rain ratio?
- !from Sun????
- ! integer,parameter::iopt_force_Cd_alpha                  = 06   ! Apply prescribed partition coefficient field?
-!  INTEGER,PARAMETER::iopt_force_POCdtoPOCrainratio        = 07   ! over-write biogem CaCd:POC export rain ratio?
  ! options - save
   INTEGER,PARAMETER::iopt_data_save_slice_ocnatm          = 01    ! save atmospheric (interface) composition time-slice?
   INTEGER,PARAMETER::iopt_data_save_slice_ocn             = 02    ! save ocean composition time-slice?
@@ -224,7 +220,6 @@ MODULE biogem_lib
   real,dimension(n_maxi,n_maxj,n_maxk)::ocn_M_rate 
   real,dimension(n_maxi,n_maxj)::mask_area_SSS
 
-!kst adding land ice mask for glacial boundary conditions. used for output only in biogem
   real,dimension(n_maxi,n_maxj)::land_ice_mask
 
   ! estimate denitrification by Chikamoto 2007-01-03
@@ -241,7 +236,6 @@ MODULE biogem_lib
   ! for name arrays of variables configured at run-time from <biogem_config_*.par> files, do not 'hard-set' as parameters
   CHARACTER(len=16),DIMENSION(n_ocn)::string_bio_remin
   CHARACTER(len=16),DIMENSION(n_sed)::string_bio_part
-  ! ocean 'physics'    
   CHARACTER(len=16),DIMENSION(n_phys_ocn),PARAMETER::string_phys_ocn = (/ &
        & 'lat             ', &
        & 'lon             ', &
@@ -263,8 +257,6 @@ MODULE biogem_lib
        & 'cost            ', &
        & 'dcost           ', &
        & 'rho             ' /)
-  ! ocean-atmosphere interface 'physics'
-!  CHARACTER(len=14),DIMENSION(n_phys_ocnatm),PARAMETER::string_phys_ocnatm = (/ &         why was len=14?
   CHARACTER(len=16),DIMENSION(n_phys_ocnatm),PARAMETER::string_phys_ocnatm = (/ &
        & 'lat             ', &
        & 'lon             ', &
@@ -275,8 +267,6 @@ MODULE biogem_lib
        & 'mask_ocn        ', &
        & 'u               ', &
        & 'seaice          ', &
-!kst       & 'solfor          ' /)
-!kst atmoutput: added string names:
        & 'solfor          ', &
        & 'relh            ', &
        & 'pptn            ', &
@@ -288,13 +278,11 @@ MODULE biogem_lib
        & 'evaptot         ', &
        & 'icethick        ', &
        & 'airt            ', &
-!kstcrack       & 'icetemp         '/)
        & 'icetemp         ', &
        & 'icecracks       ', &
        & 'usurf           ', &
        & 'uatm            ', &
        & 'fx0o            ', &
-!       & 'albedo          '/)
        & 'albedo          ', &
        & 'totFe          ', &
        & 'solFe          ', &
@@ -348,12 +336,9 @@ MODULE biogem_lib
   ! *** Miscellanenous ***
   integer::par_misc_debug_i                                       ! 'i' index value for spatially-explicit debugging
   integer::par_misc_debug_j                                       ! 'j' index value for spatially-explicit debugging
-!kstcrack
   real::par_crack                                                 ! allowable 'cracks' in seaice to allow a minimal amount of air-sea gas exchange    kst070904
-!kst en_tempwt
-  real::en_tempwt, en_tempwt_remin,dec_rate                                                    ! alters the temperature dependence in production and remineralization
+  real::en_tempwt, en_tempwt_remin,dec_rate                       ! alters the temperature dependence in production and remineralization
   real::solubility_dtemp, solubility_dsal
-!  logical::short_ts_output = .true.
   REAL::par_misc_audit_relerr                                     ! threshold for tracer audit action
   ! strings
   CHARACTER(len=6) ::string_runid
@@ -408,34 +393,25 @@ MODULE biogem_lib
   REAL::n_box_vent
   REAL,DIMENSION(n_maxi,n_maxj,n_maxk)::box_volume
 
-
   ! atmosphere
   logical,DIMENSION(0:n_atm)::ocnatm_airsea_A                        ! 
   logical,DIMENSION(0:n_atm)::ocnatm_airsea_B                        ! 
   real,DIMENSION(0:n_atm,n_maxi,n_maxj)::ocnatm_airsea_pv            ! 
   real,DIMENSION(0:n_atm,n_maxi,n_maxj)::ocnatm_airsea_solconst      ! 
   ! 'biology'
-  REAL,DIMENSION(0:n_sed,n_maxi,n_maxj,n_maxk)::bio_part             ! ocean tracer particle field (NOTE: <n_sed> tracers)
-  REAL,DIMENSION(n_maxi,n_maxj,n_maxk)::bio_part_lg             ! ocean tracer POC_lg field (NOTE: <n_sed> tracers)                    !kst LGSM
-!  REAL,DIMENSION(n_maxi,n_maxj,n_maxk)::bio_part_dia             ! ocean tracer POC_lg field (NOTE: <n_sed> tracers)                    !kst LGSM
-!  REAL,DIMENSION(n_maxi,n_maxj,n_maxk)::bio_part_nd             ! ocean tracer POC_lg field (NOTE: <n_sed> tracers)                    !kst LGSM
-  REAL,DIMENSION(n_maxi,n_maxj,n_maxk)::bio_part_sm             ! ocean tracer POC_sm field (NOTE: <n_sed> tracers)                         LGSM
+  REAL,DIMENSION(0:n_sed,n_maxi,n_maxj,n_maxk)::bio_part        ! ocean tracer particle field (NOTE: <n_sed> tracers)
+  REAL,DIMENSION(n_maxi,n_maxj,n_maxk)::bio_part_lg             ! ocean tracer POC_lg field (NOTE: <n_sed> tracers)
+  REAL,DIMENSION(n_maxi,n_maxj,n_maxk)::bio_part_sm             ! ocean tracer POC_sm field (NOTE: <n_sed> tracers)
   REAL,allocatable::bio_part_x(:,:,:,:)                         ! ocean tracer POC_x field (NOTE: <n_sed> tracers)   TaTa 171030
-  REAL,allocatable::dPO4_x(:,:,:,:)                         ! ocean tracer dPO4_x field km 190226
-  REAL,DIMENSION(n_maxi,n_maxj,n_maxk)::Nfix_Diaz,Nfix_Diaz_x             ! ocean tracer N-fixation field (molN/kg)    Tata 171113
+  REAL,allocatable::dPO4_x(:,:,:,:)                             ! ocean tracer dPO4_x field km 190226
+  REAL,DIMENSION(n_maxi,n_maxj,n_maxk)::Nfix_Diaz,Nfix_Diaz_x        ! ocean tracer N-fixation field (molN/kg)    Tata 171113
   REAL,DIMENSION(0:n_ocn,n_maxi,n_maxj,n_maxk)::bio_remin            ! ocean tracer particle remin. field (NOTE: <n_ocn> tracers)
   REAL,DIMENSION(0:n_sed,n_maxi,n_maxj,n_maxk)::bio_settle           ! ocean tracer particle settling field (NOTE: <n_sed> tracers)
-!lgsm kst
   REAL,DIMENSION(n_maxi,n_maxj,n_maxk)::bio_settle_lg           ! ocean tracer particle settling field (NOTE: lg begets diatoms (opal))
-!  REAL,DIMENSION(n_maxi,n_maxj,n_maxk)::bio_settle_dia           ! ocean tracer particle settling field (NOTE: lg begets diatoms (opal))
-!  REAL,DIMENSION(n_maxi,n_maxj,n_maxk)::bio_settle_nd           ! ocean tracer particle settling field (NOTE: lg begets diatoms (opal))
   REAL,DIMENSION(n_maxi,n_maxj,n_maxk)::bio_settle_sm           ! ocean tracer particle settling field (NOTE: sm begets coccolithophores (CaCO3))
-  REAL,allocatable::bio_settle_x(:,:,:,:)                        ! ocean tracer particle settling field 
+  REAL,allocatable::bio_settle_x(:,:,:,:)                       ! ocean tracer particle settling field 
   REAL,DIMENSION(0:n_sed,n_sed,n_maxi,n_maxj)::bio_part_red          ! 'Redfield' ratios
-!!$  REAL,DIMENSION(2,n_maxi,n_maxj,n_maxk)::bio_remin_fixed_frac_POC   ! ocean tracer particle remin. - POM transformation ratios
-!!$  REAL,DIMENSION(2,n_maxi,n_maxj,n_maxk)::bio_remin_fixed_frac_CaCO3 ! ocean tracer particle remin. - CaCO3 transformation ratios
-!!$  REAL,DIMENSION(2,n_maxi,n_maxj,n_maxk)::bio_remin_fixed_frac_opal  ! ocean tracer particle remin. - opal transformation ratios
-  ! 
+
   ! 'physics' 
   REAL,DIMENSION(n_phys_ocn,n_maxi,n_maxj,n_maxk)::phys_ocn
   REAL,DIMENSION(n_phys_ocnatm,n_maxi,n_maxj)::phys_ocnatm
@@ -460,6 +436,26 @@ MODULE biogem_lib
   REAL,DIMENSION(n_maxix)::int_NPP_x_sig, int_NPP_x_inP_sig ! NPP timeseries for each species Tata 190612, 190624
   real,dimension(n_maxix,n_maxi,n_maxj,n_maxk)::NPP_ocn_x, NPP_ocn_x_inP ! Tata 190612, 190624
 
+! MG 07/2022 MESMO 3c start
+!  REAL,DIMENSION(n_maxi,n_maxj,n_maxk)::f_cyano_old
+  REAL,DIMENSION(n_maxi,n_maxj,n_maxk)::DOCr_photodeg
+  REAL::int_DOCr_photodeg_sig
+  REAL,DIMENSION(n_maxi,n_maxj,n_maxk)::DOCr_vent_deg
+  REAL::int_DOCr_vent_deg_sig
+  REAL,DIMENSION(n_maxi,n_maxj,n_maxk)::DOCr_bk_deg
+  REAL::int_DOCr_bk_deg_sig
+  REAL,DIMENSION(n_maxi,n_maxj,n_maxk)::DOCr_bkg_deg
+  REAL::int_DOCr_bkg_deg_sig 
+  REAL,DIMENSION(n_maxi,n_maxj,n_maxk)::DOC_deg
+  REAL::int_DOC_deg_sig
+  REAL,DIMENSION(n_maxi,n_maxj,n_maxk)::DOC_prod_split1
+  REAL::int_DOC_prod_split1_sig
+  REAL,DIMENSION(n_maxi,n_maxj,n_maxk)::DOCr_prod_split2
+  REAL::int_DOCr_prod_split2_sig
+  REAL,DIMENSION(n_maxi,n_maxj,n_maxk)::DOCsl_prod_split2
+  REAL::int_DOCsl_prod_split2_sig
+! MG 07/2022 MESMO 3c end
+  
   REAL::int_POC_SO_sig,int_co2xarc_sig,int_co2xna_sig,int_co2xnp_sig,int_co2xtpi_sig,int_co2xta_sig,int_co2xso_sig,int_co2xsob_sig
   REAL,DIMENSION(0:n_atm)::int_focnatm_sig
   REAL,DIMENSION(0:n_sed)::int_focnsed_sig
@@ -470,7 +466,6 @@ MODULE biogem_lib
 
   ! by M. Chikamoto 07-19-2006
   REAL,DIMENSION(0:n_sed)::int_bio_part_sig
-!kst
   integer::k_at_300
   REAL,DIMENSION(0:n_phys_ocnatm)::int_phys_ocnatm_sig
   REAL,DIMENSION(0:n_carbon_ents)::int_carbon_ents_sig
@@ -480,11 +475,9 @@ MODULE biogem_lib
   REAL::int_misc_irradiance_sig   ! Tata 180522
   REAL::int_misc_doy_sig   ! Tata 190206
   REAL::int_tq_sig,int_tq60_sig,int_misctest_sig
-!kst 22oct13
   REAL::int_tqld_sig
   real::int_misc_det_Fe_tot_sig,int_misc_det_Fe_dis_sig                   ! from Sun
 #ifdef stoich
-! Tata 11/04/15
   REAL:: int_CtoP_sig,int_CtoP_lg_sig,int_CtoP_sm_sig
   REAL:: int_CtoN_sig,int_CtoN_lg_sig,int_CtoN_sm_sig
   REAL:: int_NtoP_sig,int_NtoP_lg_sig,int_NtoP_sm_sig
@@ -507,11 +500,8 @@ MODULE biogem_lib
   ! integrated time slice storage arrays - ocean
   REAL,DIMENSION(0:n_ocn,n_maxi,n_maxj,n_maxk)::int_ocn_timeslice
   REAL,DIMENSION(0:n_sed,n_maxi,n_maxj,n_maxk)::int_bio_part_timeslice
-!!kst LGSM:
   REAL,DIMENSION(n_maxi,n_maxj,n_maxk)::int_bio_settle_lg_timeslice
   REAL,DIMENSION(n_maxix,n_maxi,n_maxj,n_maxk)::int_bio_settle_x_timeslice !Tata 171113 
-!  REAL,DIMENSION(n_maxi,n_maxj,n_maxk)::int_bio_settle_dia_timeslice
-!  REAL,DIMENSION(n_maxi,n_maxj,n_maxk)::int_bio_settle_nd_timeslice
   REAL,DIMENSION(n_maxi,n_maxj,n_maxk)::int_bio_settle_sm_timeslice
   REAL,DIMENSION(n_maxi,n_maxj,n_maxk)::int_MM_index_lg_timeslice
   REAL,DIMENSION(n_maxi,n_maxj,n_maxk)::int_MM_index_sm_timeslice
@@ -566,6 +556,17 @@ MODULE biogem_lib
   REAL,DIMENSION(n_carbon_ents,n_maxi,n_maxj)::int_carbon_ents_timeslice
   REAL,DIMENSION(n_maxi,n_maxj)::int_bla_timeslice
 
+! MG 07/2022 MESMO 3c start
+  REAL,DIMENSION(n_maxi,n_maxj,n_maxk)::int_DOCr_photodeg_timeslice
+  REAL,DIMENSION(n_maxi,n_maxj,n_maxk)::int_DOCr_vent_deg_timeslice
+  REAL,DIMENSION(n_maxi,n_maxj,n_maxk)::int_DOCr_bk_deg_timeslice 
+  REAL,DIMENSION(n_maxi,n_maxj,n_maxk)::int_DOCr_bkg_deg_timeslice 
+  REAL,DIMENSION(n_maxi,n_maxj,n_maxk)::int_DOC_deg_timeslice
+  REAL,DIMENSION(n_maxi,n_maxj,n_maxk)::int_DOC_prod_split1_timeslice 
+  REAL,DIMENSION(n_maxi,n_maxj,n_maxk)::int_DOCr_prod_split2_timeslice
+  REAL,DIMENSION(n_maxi,n_maxj,n_maxk)::int_DOCsl_prod_split2_timeslice
+! MG 07/2022 MESMO 3c end
+
   REAL,DIMENSION(n_carb,n_maxi,n_maxj,n_maxk)::int_carb_timeslice
   REAL,DIMENSION(n_carbconst,n_maxi,n_maxj,n_maxk)::int_carbconst_timeslice
   REAL,DIMENSION(n_maxi,n_maxj)::int_mldz_timeslice
@@ -573,8 +574,6 @@ MODULE biogem_lib
   !  integrated time slice storage arrays - ocean-atmosphere interface
   REAL,DIMENSION(0:n_atm,n_maxi,n_maxj)::int_sfcatm1_timeslice
   REAL,DIMENSION(0:n_atm,n_maxi,n_maxj)::int_focnatm_timeslice
-!kst add tau output
-!  REAL,DIMENSION(2,n_maxi,n_maxj)::taux
   !  integrated time slice storage arrays - ocean-sediment interface
   REAL,DIMENSION(0:n_sed,n_maxi,n_maxj)::int_sfcsed1_timeslice
   REAL,DIMENSION(0:n_sed,n_maxi,n_maxj)::int_focnsed_timeslice
@@ -597,7 +596,7 @@ MODULE biogem_lib
   ! options arrays
   LOGICAL,DIMENSION(n_opt_atm)::opt_atm
   LOGICAL,DIMENSION(n_opt_bio)::opt_bio
-!kst steady state restore option:
+  !kst steady state restore option:
   LOGICAL::restore_prev_state = .FALSE.
   LOGICAL::restore_juryrig = .FALSE.
   LOGICAL,DIMENSION(n_opt_force)::opt_force = .FALSE.
@@ -625,14 +624,6 @@ MODULE biogem_lib
   REAL,DIMENSION(0:n_atm)::force_restore_atm_tconst
   INTEGER,DIMENSION(0:n_atm,2)::force_restore_atm_sig_i
   LOGICAL,DIMENSION(0:n_atm)::force_restore_atm_select
-!!$  REAL,DIMENSION(0:n_sed,n_maxi,n_maxj)::force_restore_sed
-!!$  REAL,DIMENSION(0:n_sed,n_maxi,n_maxj)::force_restore_sed_I
-!!$  REAL,DIMENSION(0:n_sed,n_maxi,n_maxj)::force_restore_sed_II
-!!$  REAL,DIMENSION(0:n_sed,2,n_data_max)::force_restore_sed_sig
-!!$  REAL,DIMENSION(0:n_sed)::force_restore_sed_sig_x
-!!$  REAL,DIMENSION(0:n_sed)::force_restore_sed_tconst
-!!$  INTEGER,DIMENSION(0:n_sed,2)::force_restore_sed_sig_i
-!!$  LOGICAL,DIMENSION(0:n_sed)::force_restore_sed_select
   ! forcing - flux
   REAL,DIMENSION(0:n_ocn,n_maxi,n_maxj,n_maxk)::force_flux_ocn
   REAL,DIMENSION(0:n_ocn,n_maxi,n_maxj,n_maxk)::force_flux_ocn_I
@@ -667,9 +658,7 @@ MODULE biogem_lib
   real::inv_carb
   real,dimension(n_maxi,n_maxj,n_maxk)::MM_index,MM_index_lg,MM_index_sm
   real,allocatable::MM_index_x(:,:,:,:) ! Tata 171027
-!  real,DIMENSION(n_maxi,n_maxj,n_maxk)::iocn_T, iocn_S, iocn_NO3
   real,DIMENSION(n_maxi,n_maxj,n_maxk)::iocn_T, iocn_S, iocn_NO3,iocn_CO2_MM
-!  real,DIMENSION(n_maxi,n_maxj,n_maxk,20)::iocn_Tseason,constCO3_carb_ohm,dPO4const
   real,DIMENSION(n_maxi,n_maxj,n_maxk,20)::ocn_T_season,CO3_carb_ohm_season,ocn_T_season1,CO3_carb_ohm_season1,dPO4_season,dPO4_season1
   real,DIMENSION(n_maxi,n_maxj,n_maxk,20)::CaCO3_season,CaCO3_season1,SitoN_season,SitoN_season1
   real,DIMENSION(n_maxi,n_maxj,n_maxk,20)::CtoP_season,CtoP_season1  ! Tata 070615
@@ -754,26 +743,26 @@ MODULE biogem_lib
 
   ! *** biological production and remineralization ***
   integer::par_bio_numspec                                        ! number of phytoplankton functional types 
-  real::par_bio_k0_PO4 = const_real_one                           ! base [PO4]-uptake rate (umol kg-1 yr-1)         nominal rate ( nuts_tau )
-  real::par_bio_k0_PO4_lg = const_real_one                           ! base [PO4]-uptake rate (umol kg-1 yr-1)   large taxa
-  real::par_bio_k0_PO4_sm = const_real_one                           ! base [PO4]-uptake rate (umol kg-1 yr-1)    basal rate, small taxa
+  real::par_bio_k0_PO4 = const_real_one                           ! base [PO4]-uptake rate (umol kg-1 yr-1) nominal rate (nuts_tau )
+  real::par_bio_k0_PO4_lg = const_real_one                        ! base [PO4]-uptake rate (umol kg-1 yr-1) large taxa
+  real::par_bio_k0_PO4_sm = const_real_one                        ! base [PO4]-uptake rate (umol kg-1 yr-1) basal rate, small taxa
   real::par_bio_c0_PO4 = const_real_one                           ! [PO4] M-M half-sat value (umol kg-1)
-  real::par_bio_c0_PO4_lg = const_real_one                           ! [PO4] M-M half-sat value (umol kg-1)   large phytos
-  real::par_bio_c0_PO4_sm = const_real_one                           ! [PO4] M-M half-sat value (umol kg-1)     small taxa
-  real::par_bio_c0_PO4_diaz = const_real_one                           ! [PO4] M-M half-sat value (umol kg-1)   diazotrophs
+  real::par_bio_c0_PO4_lg = const_real_one                        ! [PO4] M-M half-sat value (umol kg-1) large phytos
+  real::par_bio_c0_PO4_sm = const_real_one                        ! [PO4] M-M half-sat value (umol kg-1) small taxa
+  real::par_bio_c0_PO4_diaz = const_real_one                      ! [PO4] M-M half-sat value (umol kg-1) diazotrophs
   real::par_bio_c0_NO3 = const_real_one                           ! [NO3] M-M half-sat value (umol kg-1)
-  real::par_bio_c0_NO3_lg = const_real_one                           ! [NO3] M-M half-sat value (umol kg-1) LP
-  real::par_bio_c0_NO3_sm = const_real_one                           ! [NO3] M-M half-sat value (umol kg-1) SP
-  real::par_bio_c0_NO3_diaz = const_real_one                           ! [NO3] M-M half-sat value (umol kg-1) diazotrophs
+  real::par_bio_c0_NO3_lg = const_real_one                        ! [NO3] M-M half-sat value (umol kg-1) LP
+  real::par_bio_c0_NO3_sm = const_real_one                        ! [NO3] M-M half-sat value (umol kg-1) SP
+  real::par_bio_c0_NO3_diaz = const_real_one                      ! [NO3] M-M half-sat value (umol kg-1) diazotrophs
   real::par_bio_c0_CO2 = const_real_one                           ! [CO2(aq)] M-M half-sat value (umol kg-1)
-  real::par_bio_c0_CO2_lg = const_real_one                           ! [CO2(aq)] M-M half-sat value (umol kg-1)
-  real::par_bio_c0_CO2_sm = const_real_one                           ! [CO2(aq)] M-M half-sat value (umol kg-1)
-  real::par_bio_c0_CO2_diaz = const_real_one                           ! [CO2(aq)] M-M half-sat value (umol kg-1) diazotrophs
+  real::par_bio_c0_CO2_lg = const_real_one                        ! [CO2(aq)] M-M half-sat value (umol kg-1)
+  real::par_bio_c0_CO2_sm = const_real_one                        ! [CO2(aq)] M-M half-sat value (umol kg-1)
+  real::par_bio_c0_CO2_diaz = const_real_one                      ! [CO2(aq)] M-M half-sat value (umol kg-1) diazotrophs
   real::par_bio_c0_SiO2 = const_real_one                          ! [H4SiO4] M-M half-sat value (umol kg-1)
-  real::par_bio_c0_Fe = const_real_one                            ! [Fe] M-M half-sat value (umol kg-1)                    from Sun add 2009/05/14
-  real::par_bio_c0_Fe_lg = const_real_one                            ! [Fe] M-M half-sat value (umol kg-1)                    from Sun add 2009/05/14
-  real::par_bio_c0_Fe_sm = const_real_one                            ! [Fe] M-M half-sat value (umol kg-1)                    from Sun add 2009/05/14
-  real::par_bio_c0_Fe_diaz = const_real_one                            ! [Fe] M-M half-sat value (umol kg-1)                diazotrophs, added 171017    
+  real::par_bio_c0_Fe = const_real_one                            ! [Fe] M-M half-sat value (umol kg-1)
+  real::par_bio_c0_Fe_lg = const_real_one                         ! [Fe] M-M half-sat value (umol kg-1)
+  real::par_bio_c0_Fe_sm = const_real_one                         ! [Fe] M-M half-sat value (umol kg-1)
+  real::par_bio_c0_Fe_diaz = const_real_one                       ! [Fe] M-M half-sat value (umol kg-1)
   real::par_bio_red_POC_CaCO3 = const_real_one                    ! base CaCO3:POC export ratio
   real::par_bio_red_POC_opal = const_real_one                     ! base opal:POC export ratio
   real::par_bio_remin_POC_frac2 = const_real_one                  ! initial fractional abundance of POC component (#2)
@@ -791,6 +780,19 @@ MODULE biogem_lib
   real::par_bio_remin_DOMRvent = const_real_one                   ! JZ added 05/2018
   real::par_bio_remin_DOMRvent_14C = const_real_one               ! JZ added 09/2019
   real::par_bio_remin_DOMRvent_14C_facc = const_real_one          ! JZ added 09/2019
+! MG 07/2022 MESMO 3c start
+  real::par_bio_prefremin_DOPr_factor = const_real_one            
+  real::par_bio_prefremin_DONr_factor = const_real_one            
+  real::par_bio_prefremin_DOPsl_factor = const_real_one           
+  real::par_bio_prefremin_DONsl_factor = const_real_one           
+  real::par_bio_laws_fudge = const_real_one                       
+  real::par_bio_dunne_factor = const_real_one                     
+  real::par_bio_dunne_tempfactor = const_real_one                 
+  real::par_bio_Eppley_a = const_real_one                         
+  real::par_bio_Eppley_k = const_real_one                         
+  real::par_bio_tauphoto_a = const_real_one                       
+  real::par_bio_tauphoto_k = const_real_one                       
+! MG 07/2022 MESMO 3c end
   real::par_bio_red_DOMRfrac = const_real_one                     ! km added 10/2017
   real::par_bio_remin_sinkingrate = const_real_one                ! prescribed particle sinking rate (m d-1)
   real::par_bio_red_POP_PON = const_real_one                      ! P:N Redfield ratio for O2
@@ -802,10 +804,8 @@ MODULE biogem_lib
   real::par_bio_red_DOMfrac = const_real_one                      ! 
   real::par_bio_remin_POC_K = const_real_one                      ! opal particulate base dissolution rate (yr-1)
   real::par_bio_si2n_powerlaw_exp = const_real_one                ! exponent of FeT-dependent power law of Si/N
-
   real::opt_remin_POC_z = const_real_one                          ! depth dependent remineralization of POC: 1.0=yes, 0.0=no
   real::par_bio_remin_k = const_real_one                          ! e-folding length scale of depth dependent POC remineralization
-
   real::par_bio_remin_CaCO3_K = const_real_one                    ! opal particulate base dissolution rate (yr-1)
   real::par_bio_remin_opal_K = const_real_one                     ! opal particulate base dissolution rate (yr-1)
   real::par_bio_o2_crit = const_real_one                          ! O2 threshold value for denitrification to occur (mol kg-1) TaTa 171115
@@ -814,9 +814,9 @@ MODULE biogem_lib
   real::par_bio_remin_fvalue = const_real_one                     ! f value for calculating -O2:P from C:P and N:P   tata 180918
   real::par_bio_N2fix_mm                                          !  half-saturation constant for nitrate uptake by N2 fixers Tata 181018
 
-  real::par_bio_FetoC_C = const_real_one                           !kst  added to conform to trunk 4/7/10
-  real::par_bio_FetoC_C_lg = const_real_one                           !kst  added to conform to trunk 4/7/10
-  real::par_bio_FetoC_C_sm = const_real_one                           !kst  added to conform to trunk 4/7/10
+  real::par_bio_FetoC_C = const_real_one                          !kst  added to conform to trunk 4/7/10
+  real::par_bio_FetoC_C_lg = const_real_one                       !kst  added to conform to trunk 4/7/10
+  real::par_bio_FetoC_C_sm = const_real_one                       !kst  added to conform to trunk 4/7/10
   real::par_bio_FetoC_K = const_real_one
   real::par_bio_FetoC_K_lg = const_real_one
   real::par_bio_FetoC_K_sm = const_real_one
@@ -930,7 +930,6 @@ MODULE biogem_lib
   INTEGER::par_data_save_timeslice_i
   ! *** MISC ***
   real::par_gastransfer_a                                         ! gas transfer coefficient 'a' (see Wanninkhof [1992])
-!  Fe code from sun-----
   real::par_det_Fe_sol                                            ! aeolian Fe solubility
   real::par_det_Fe_sol_exp                                        !aeolian Fe solubility exponent
   real::par_scav_Fe_k0                                            ! see: Parekh et al. [2005] 
@@ -942,12 +941,11 @@ MODULE biogem_lib
   real::par_scav_Fe_sf_det                                        ! det scav scale factor see: Parekh et al. [2005] 
   real::par_det_Fe_frac                                           ! mass abundance of Fe in dust
   real::par_K_FeL                                                 ! (see: Parekth et al. [2005])
-  real::par_part_red_FeTmin                                        ! (see: Ridgwell [2001])need to declare here and assign value in biogem_box
-  real::par_part_red_FetoCmax                                      ! (see: Ridgwell [2001])need to declare here and assign value in biogem_box
-  real::par_scav_Fe_remin                                           ! fraction of scave'd Fe remineralized upon reaching seds (1.0-burial effeciency)
+  real::par_part_red_FeTmin                                       ! (see: Ridgwell [2001])need to declare here and assign value in biogem_box
+  real::par_part_red_FetoCmax                                     ! (see: Ridgwell [2001])need to declare here and assign value in biogem_box
+  real::par_scav_Fe_remin                                         ! fraction of scave'd Fe remineralized upon reaching seds (1.0-burial effeciency)
   real::par_bio_red_O2_H2SO4                                     ! pseudo 'Redfield ratio' to convert O2 deficit to sulphate O2
   real::par_bio_red_O2_NO3                                       ! pseudo 'Redfield ratio' to convert O2 deficit to nitrate O2
- !sun 2009/05/14 -- dust forcing 
   real,dimension(n_maxi,n_maxj)::dust_forcing
  
   ! km 2006/07/26 -- anthropogenic nitrogen runoff flux
@@ -1001,7 +999,13 @@ MODULE biogem_lib
   logical::DOCR_VENT_FLAG      ! Flag to enable hydrothermal vent degradation
   logical::DOCR_DEEPPOCSPLIT   ! Flag to enable POC split to DOC and DIC at depth
   logical::DOCR_ACC_VENT_DECAY ! Flag to enable accelerated C14 decay (to simulate old vent reservoir)
-  
+
+  ! MG DOC flags
+  logical::DOCSL_TEMP_FLAG                 ! Flag to introduce temperature-dependent lifetime for semi-labile DOC
+  logical::DOCRPHOTO_TEMP_FLAG             ! Flag to introduce temperature-dependent lifetime for DOCR following Porcal et al. 2015
+  logical::DOP_PREFREMIN_FLAG              ! Flag to preferentially remineralize DOP over other DOM species
+  logical::DOPR_PREFREMIN_FLAG             ! Flag to preferentially remineralize DOPR over other DOMR species
+
 CONTAINS
 
 

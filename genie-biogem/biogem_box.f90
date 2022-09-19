@@ -420,7 +420,7 @@ CONTAINS
     real :: loc_frac_N2fix
     real :: loc_N2fix_mm    ! TT 181018
    
-    ! Nutrient Concentrations taking into account of remineralization Tata 180125
+    ! Nutrient Concentrations taking into account of ineralization Tata 180125
     real :: loc_NO3_rem,loc_PO4_rem,loc_FeT_rem,loc_Si_rem,loc_CO2_rem
 
     ! Temperature dependent POM export ratio Tata 180423
@@ -434,7 +434,10 @@ CONTAINS
     ! DOM variables KM 6/2020
     real :: loc_pom, loc_dom, loc_domr
     real :: loc_DOMRfrac
-    
+        
+    ! DOC variables MG 2021
+    real :: f_cyano
+
 #ifdef wor16_2in75
     real,parameter::zcrit=75.0              ! critical depth as per OCMIP-2 : 75 m
 #else
@@ -626,9 +629,14 @@ CONTAINS
 ! Use "NPP" (in mmolC m-2 d-1) from the previous timestep (actual NPP is calculated later in the code) 
 !#ifdef flex_efratio_dunne
    if (TEMP_NPP_EFRATIO) then
-    loc_bio_red_POMfrac = - 0.0101*loc_TC + 0.0582* & 
-        & log((NPP_season(dum_i,dum_j,k,biostep-1)*1e3*phys_ocn(ipo_rA,dum_i,dum_j,k)/365)/100) + & 
-        & 0.419
+!    loc_bio_red_POMfrac = - 0.0101*loc_TC + 0.0582* & 
+!        & log((NPP_season(dum_i,dum_j,k,biostep-1)*1e3*phys_ocn(ipo_rA,dum_i,dum_j,k)/365)/100) + & 
+!        & 0.419
+! MG 07/2022 MESMO 3c start
+     loc_bio_red_POMfrac = (par_bio_dunne_tempfactor*-0.0101*loc_TC) + (0.0582* & 
+        & log((NPP_season(dum_i,dum_j,k,biostep-1)*1e3*phys_ocn(ipo_rA,dum_i,dum_j,k)/365)/100)) + & 
+        & 0.419 + par_bio_dunne_factor
+! MG 07/2022 MESMO 3c end
     !print*,'ef ratio = ', loc_bio_red_POMfrac
    endif
 !#endif
@@ -1334,11 +1342,12 @@ CONTAINS
              if (.not. restore_prev_state ) then
                 loc_dom =        loc_bio_red_DOMfrac *bio_part(is,dum_i,dum_j,k)   !km 6/2020 first split to DOM
                 loc_pom = (1.0 - loc_bio_red_DOMfrac)*bio_part(is,dum_i,dum_j,k)   !   and POM
-
-!                print*,' BEFORE: loc_bio_red_DOMfrac, DOMRfrac: ',loc_bio_red_DOMfrac
-!                print*,'   bio_remin, bio_part: ', bio_remin(io,dum_i,dum_j,k), bio_part(is,dum_i,dum_j,k) 
-!                print*,'   loc_dom, loc_pom: ', loc_dom, loc_pom
-                
+! MG 07/2022 MESMO 3c start                
+                ! Initial production of DOCt MG 03/30/2022
+                if (is .EQ. is_POC) then
+                   DOC_prod_split1(dum_i,dum_j,k) = loc_dom
+                end if
+! MG 07/2022 MESMO 3c end                       
                 if (ocn_select(io)) then                                    ! DOMr enabled --> DOM or DOMr
                    if (io2 /= 0) then                                              !   1: convert to DOMr
                       bio_remin(io,dum_i,dum_j,k) = bio_remin(io,dum_i,dum_j,k)+   loc_DOMRfrac *loc_dom
@@ -1625,19 +1634,27 @@ CONTAINS
     real::loc_DOM_C_min,loc_DOM_N_min,loc_DOM_P_min,loc_DOM_Fe_min
     real::loc_DOM_C_13C_min, loc_DOM_C_14C_min
     real::loc_standard,loc_frac,loc_d14c
-    real::loc_bio_remin_DOMRratio, loc_bio_remin_DOMRphoto, loc_bio_remin_DOMRvent
+!    real::loc_bio_remin_DOMRratio, loc_bio_remin_DOMRphoto, loc_bio_remin_DOMRvent
+    real::loc_bio_remin_DOMRvent
     real::loc_r15N 
     real::loc_alpha, loc_delta 
     real::delta,ktemp,tv2 
     real::loc_bio_red_DOP_DO2,loc_bio_red_DOC_DO2
-    real::loc_potO2cap,loc_O2demand,loc_bio_remin_DOMratio
+!    real::loc_potO2cap,loc_O2demand,loc_bio_remin_DOMratio
+    real::loc_potO2cap,loc_O2demand
     real::meanI, z1, z2, zlayer             !km light for photodegradation
+! MG 07/2022 MESMO 3c start
+    real::loc_TC(n_maxk) 
+    real::loc_bio_remin_DOMlifetime(n_maxk),loc_bio_remin_DOMRlifetime(n_maxk)
+    real::loc_bio_remin_DOMratio(n_maxk),loc_bio_remin_DOMRratio(n_maxk)
+    real::loc_bio_remin_DOMRphoto(n_maxk),loc_bio_remin_DOMRphoto_lifetime(n_maxk)   
+! MG 07/2022 MESMO 3c end
 
     ! *** REMINERALIZE DISSOLVED ORGANIC MATTER (DOM => POM => DIM)***
     ! NOTE: the new algorithm converts the fraction of DOM marked to be remineralized first into POM before applying the
     !       'usual' generic conversion of sed -> ocn tracers, so as to avoid the need for 'special cases'
     !       (such as of the link between DON and ALK, or POP and ALK)
-    ! km 11/2017 but this is confusing. DOM remineralized should just do to dissolved inorganic instead of POM...
+    ! km 11/2017 but this is confusing. DOM remineralized should just go to dissolved inorganic instead of POM...
 
     ! Setting minimum DOC,DON,DOP to prevent concentrations going negative
     ! Values are Hard-wired
@@ -1670,24 +1687,90 @@ CONTAINS
           
     ! **MODIFY DOM & DOMR REMIN RATIOS to BE 1 (100% REMIN) IF REMIN TIMESCALE IS SHORTER THAN TIMESTEP**
     ! DOM remin timescale [Unit = years]
-    if (par_bio_remin_DOMlifetime > dum_dtyr) then
-       loc_bio_remin_DOMratio = dum_dtyr/par_bio_remin_DOMlifetime
-    else
-       loc_bio_remin_DOMratio = 1.0
-    end if               
+!km 9/22     if (par_bio_remin_DOMlifetime > dum_dtyr) then
+!km 9/22        loc_bio_remin_DOMratio = dum_dtyr/par_bio_remin_DOMlifetime
+!km 9/22     else
+!km 9/22        loc_bio_remin_DOMratio = 1.0
+!km 9/22     end if
+    
+! MG 07/2022 MESMO 3c start
+   
+    ! Temperature-dependent DOCSL lifetime following Eppley, MG 5/26/21
+      
+    DO k=n_kmax,dum_k1,-1
+       ! local temperature [C] MG 5/26/21
+       loc_TC(k) = ocn(io_T,dum_i,dum_j,k) - const_zeroC
+         
+       if (DOCSL_TEMP_FLAG) then
+          loc_bio_remin_DOMlifetime(k) = par_bio_Eppley_a*EXP(-par_bio_Eppley_k*loc_TC(k)) ! a and k determined by input parameters MG 03/30/22
+
+          if (loc_bio_remin_DOMlifetime(k) > dum_dtyr) then
+             loc_bio_remin_DOMratio(k) = dum_dtyr/loc_bio_remin_DOMlifetime(k)
+          else
+             loc_bio_remin_DOMratio(k) = 1.0
+          end if
+             
+       else
+! MG 07/2022 MESMO 3c end
+          if (par_bio_remin_DOMlifetime > dum_dtyr) then
+             loc_bio_remin_DOMratio(k) = dum_dtyr/par_bio_remin_DOMlifetime
+          else
+             loc_bio_remin_DOMratio(k) = 1.0
+          end if
+       end if
+    end DO
+
 !#ifdef docr
-    ! Normal or background degradation DOMR remin          
-    if (par_bio_remin_DOMRlifetime > dum_dtyr) then
-       loc_bio_remin_DOMRratio = dum_dtyr/par_bio_remin_DOMRlifetime
-    else
-       loc_bio_remin_DOMRratio = 1.0
-    end if
-    ! DOMR Photodegradation [Unit = years]
-    if (par_bio_remin_DOMRphoto > dum_dtyr) then
-       loc_bio_remin_DOMRphoto = dum_dtyr/par_bio_remin_DOMRphoto
-    else
-       loc_bio_remin_DOMRphoto = 1.0
-    end if
+!km 9/22     ! Normal or background degradation DOMR remin          
+!km 9/22     if (par_bio_remin_DOMRlifetime > dum_dtyr) then
+!km 9/22        loc_bio_remin_DOMRratio = dum_dtyr/par_bio_remin_DOMRlifetime
+!km 9/22     else
+!km 9/22        loc_bio_remin_DOMRratio = 1.0
+!km 9/22     end if
+!km 9/22     ! DOMR Photodegradation [Unit = years]
+!km 9/22     if (par_bio_remin_DOMRphoto > dum_dtyr) then
+!km 9/22        loc_bio_remin_DOMRphoto = dum_dtyr/par_bio_remin_DOMRphoto
+!km 9/22     else
+!km 9/22        loc_bio_remin_DOMRphoto = 1.0
+!km 9/22     end if
+!km 9/22     ! DOMR hydrothermal vent degradation [Unit = years]
+!km 9/22     if (par_bio_remin_DOMRvent > dum_dtyr) then
+!km 9/22        loc_bio_remin_DOMRvent = dum_dtyr/par_bio_remin_DOMRvent
+!km 9/22     else
+!km 9/22        loc_bio_remin_DOMRvent = 1.0
+!km 9/22     end if
+    
+! MG 07/2022 MESMO 3c start
+    DO k=n_kmax,dum_k1,-1
+       if (par_bio_remin_DOMRlifetime > dum_dtyr) then 
+          loc_bio_remin_DOMRratio(k) = dum_dtyr/par_bio_remin_DOMRlifetime
+       else
+          loc_bio_remin_DOMRratio(k) = 1.0
+       end if
+
+    ! DOMR Photodegradation [Unit = years] 
+
+    ! MG 5/26/21 Temperature-dependent DOMRphoto lifetime 
+
+       if (DOCRPHOTO_TEMP_FLAG) then
+          loc_bio_remin_DOMRphoto_lifetime(k) = par_bio_tauphoto_a*EXP(-par_bio_tauphoto_k*loc_TC(k)) ! a, k coefficients controlled by input parameters MG 03/30/22
+
+          if (loc_bio_remin_DOMRphoto_lifetime(k) > dum_dtyr) then
+             loc_bio_remin_DOMRphoto(k) = dum_dtyr/loc_bio_remin_DOMRphoto_lifetime(k)
+          else
+             loc_bio_remin_DOMRphoto(k) = 1.0
+          end if
+          
+       else
+! MG 07/2022 MESMO 3c end
+          if (par_bio_remin_DOMRphoto > dum_dtyr) then
+             loc_bio_remin_DOMRphoto(k) = dum_dtyr/par_bio_remin_DOMRphoto
+          else
+             loc_bio_remin_DOMRphoto(k) = 1.0
+          end if
+       end if
+    end DO
+        
     ! DOMR hydrothermal vent degradation [Unit = years]
     if (par_bio_remin_DOMRvent > dum_dtyr) then
        loc_bio_remin_DOMRvent = dum_dtyr/par_bio_remin_DOMRvent
@@ -1718,6 +1801,7 @@ CONTAINS
           loc_bio_red_DOP_DO2 = -1.0*((1.0+par_bio_remin_fvalue)*ocn(io_DOM_C,dum_i,dum_j,k)/ocn(io_DOM_P,dum_i,dum_j,k) + &
               & 2.0*ocn(io_DOM_N,dum_i,dum_j,k)/ocn(io_DOM_P,dum_i,dum_j,k))
           loc_bio_red_DOC_DO2 = -1.0*(1.0+par_bio_remin_fvalue + 2.0*ocn(io_DOM_N,dum_i,dum_j,k)/ocn(io_DOM_C,dum_i,dum_j,k))
+          
           if (abs(loc_bio_red_DOC_DO2) >  (1.0+par_bio_remin_fvalue) .AND. abs(loc_bio_red_DOP_DO2) > const_real_nullsmall) then
              bio_red_DOC_DO2(dum_i,dum_j,k) = loc_bio_red_DOC_DO2
              bio_red_DOP_DO2(dum_i,dum_j,k) = loc_bio_red_DOP_DO2
@@ -1725,7 +1809,7 @@ CONTAINS
              bio_red_DOC_DO2(dum_i,dum_j,k) = conv_sed_ocn(io_O2,is_POC)    
              bio_red_DOP_DO2(dum_i,dum_j,k) = bio_red_DOC_DO2(dum_i,dum_j,k)*par_bio_red_POP_POC    
           endif
-           
+
           if (.NOT. FLEX_REMINRATIO) then    ! Fixed -O2:C
             bio_red_DOC_DO2(dum_i,dum_j,k) = conv_sed_ocn(io_O2,is_POC)
             bio_red_DOP_DO2(dum_i,dum_j,k) = bio_red_DOC_DO2(dum_i,dum_j,k)*ocn(io_DOM_C,dum_i,dum_j,k)/ocn(io_DOM_P,dum_i,dum_j,k)
@@ -1734,19 +1818,19 @@ CONTAINS
 
           ! calculate potential oxidation capacity, with variable -O2:C Tata 181022
           loc_O2demand = bio_red_DOC_DO2(dum_i,dum_j,k)* &
-               &   (conv_DOM_POM(is_POC,io_DOM_C) * loc_bio_remin_DOMratio *ocn(io_DOM_C,dum_i,dum_j,k))
+               &   (conv_DOM_POM(is_POC,io_DOM_C) * loc_bio_remin_DOMratio(k) *ocn(io_DOM_C,dum_i,dum_j,k))
 
           if (ocn_select(io_DOM_Cr)) then
              loc_O2demand = loc_O2demand + &
-                  &   (conv_DOM_POM(is_POC,io_DOM_Cr)* loc_bio_remin_DOMRratio*ocn(io_DOM_Cr,dum_i,dum_j,k))
+                  &   (conv_DOM_POM(is_POC,io_DOM_Cr)* loc_bio_remin_DOMRratio(k)*ocn(io_DOM_Cr,dum_i,dum_j,k))
           endif
                
           ! compare with potential oxygen availability and modify fraction remineralized accordingly
           ! No photodegradation here because it is not related to respiration
           if ((loc_O2demand > loc_potO2cap) .AND. (loc_O2demand > const_real_nullsmall)) then
-             loc_bio_remin_DOMratio = (loc_potO2cap/loc_O2demand)*loc_bio_remin_DOMratio         
+             loc_bio_remin_DOMratio(k) = (loc_potO2cap/loc_O2demand)*loc_bio_remin_DOMratio(k)         
 !#ifdef docr
-             loc_bio_remin_DOMRratio = (loc_potO2cap/loc_O2demand)*loc_bio_remin_DOMRratio         
+             loc_bio_remin_DOMRratio(k) = (loc_potO2cap/loc_O2demand)*loc_bio_remin_DOMRratio(k)
 !#endif
           end if
 
@@ -1779,7 +1863,7 @@ CONTAINS
                       loc_delta = 0. !-17.0 
                       loc_alpha = 1.0 + loc_delta/1000. 
                    
-                      delta = loc_bio_remin_DOMratio*conv_DOM_POM(is,io)*ocn(io_DOM_N,dum_i,dum_j,k) 
+                      delta = loc_bio_remin_DOMratio(k)*conv_DOM_POM(is,io)*ocn(io_DOM_N,dum_i,dum_j,k) 
                    
                       loc_bio_part(is,k) = loc_alpha * loc_r15N * delta   
                    
@@ -1799,8 +1883,26 @@ CONTAINS
                             & ocn(io_DOM_Fe,dum_i,dum_j,k) > loc_DOM_Fe_min ) then
 
 !                            print*,' DOM --> POM'
-                            loc_bio_part(is,k)  = loc_bio_part(is,k)  + loc_bio_remin_DOMratio *conv_DOM_POM(is,io)*ocn(io,dum_i,dum_j,k)
-                            loc_bio_remin(io,k) = loc_bio_remin(io,k) - loc_bio_remin_DOMratio *conv_DOM_POM(is,io)*ocn(io,dum_i,dum_j,k)
+!km 9/22                            loc_bio_part(is,k)  = loc_bio_part(is,k)  + loc_bio_remin_DOMratio *conv_DOM_POM(is,io)*ocn(io,dum_i,dum_j,k)
+!km 9/22                            loc_bio_remin(io,k) = loc_bio_remin(io,k) - loc_bio_remin_DOMratio *conv_DOM_POM(is,io)*ocn(io,dum_i,dum_j,k)
+
+! MG 07/2022 MESMO 3c start                               
+                            if (io .EQ. io_DOM_P) then    ! allow for preferential remineralization of DOP MG 01/28/22; DON MG 01/31/22
+                               loc_bio_part(is,k)  = loc_bio_part(is,k)  + par_bio_prefremin_DOPsl_factor*loc_bio_remin_DOMratio(k) *conv_DOM_POM(is,io)*ocn(io,dum_i,dum_j,k)
+                               loc_bio_remin(io,k) = loc_bio_remin(io,k) - par_bio_prefremin_DOPsl_factor*loc_bio_remin_DOMratio(k) *conv_DOM_POM(is,io)*ocn(io,dum_i,dum_j,k)
+                            else if (io .EQ. io_DOM_N) then
+                               loc_bio_part(is,k)  = loc_bio_part(is,k)  + par_bio_prefremin_DONsl_factor*loc_bio_remin_DOMratio(k) *conv_DOM_POM(is,io)*ocn(io,dum_i,dum_j,k)
+                               loc_bio_remin(io,k) = loc_bio_remin(io,k) - par_bio_prefremin_DONsl_factor*loc_bio_remin_DOMratio(k) *conv_DOM_POM(is,io)*ocn(io,dum_i,dum_j,k)
+                            else
+                               loc_bio_part(is,k)  = loc_bio_part(is,k)  + loc_bio_remin_DOMratio(k) *conv_DOM_POM(is,io)*ocn(io,dum_i,dum_j,k)
+                               loc_bio_remin(io,k) = loc_bio_remin(io,k) - loc_bio_remin_DOMratio(k) *conv_DOM_POM(is,io)*ocn(io,dum_i,dum_j,k)
+                            end if
+                            
+                            if (io .EQ. io_DOM_C) then                                  
+                               DOC_deg(dum_i,dum_j,k) = loc_bio_remin_DOMratio(k)*conv_DOM_POM(is,io)*ocn(io,dum_i,dum_j,k)
+                            end if
+! MG 07/2022 MESMO 3c end
+
                          end if
 !                      END IF
 !
@@ -1814,32 +1916,108 @@ CONTAINS
                          !photodeg_counter ensures that if photodeg occurs in the surface,  background degradation does not
                          if (DOCR_PHOTO_FLAG) then
                             if ((k == n_kmax).and.(meanI > 5.0)) then   !km photodegradation only in sf with a bit of light
-                                  loc_bio_part(is,k)  = loc_bio_part(is,k)  + loc_bio_remin_DOMRphoto*conv_DOM_POM(is,io)*ocn(io,dum_i,dum_j,k)
-                                  loc_bio_remin(io,k) = loc_bio_remin(io,k) - loc_bio_remin_DOMRphoto*conv_DOM_POM(is,io)*ocn(io,dum_i,dum_j,k)
-                                  photodeg_counter = 1
+!km 9/22                                  loc_bio_part(is,k)  = loc_bio_part(is,k)  + loc_bio_remin_DOMRphoto*conv_DOM_POM(is,io)*ocn(io,dum_i,dum_j,k)
+!km 9/22                                  loc_bio_remin(io,k) = loc_bio_remin(io,k) - loc_bio_remin_DOMRphoto*conv_DOM_POM(is,io)*ocn(io,dum_i,dum_j,k)
+
+                               ! MG 07/2022 MESMO 3c start
+                               if (io .EQ. io_DOM_Pr) then     
+                                  loc_bio_part(is,k)  = loc_bio_part(is,k)  + par_bio_prefremin_DOPr_factor*loc_bio_remin_DOMRphoto(k)*conv_DOM_POM(is,io)*ocn(io,dum_i,dum_j,k)
+                                  loc_bio_remin(io,k) = loc_bio_remin(io,k) - par_bio_prefremin_DOPr_factor*loc_bio_remin_DOMRphoto(k)*conv_DOM_POM(is,io)*ocn(io,dum_i,dum_j,k)
+                               else if (io .EQ. io_DOM_Nr) then
+                                  loc_bio_part(is,k)  = loc_bio_part(is,k)  + par_bio_prefremin_DONr_factor*loc_bio_remin_DOMRphoto(k)*conv_DOM_POM(is,io)*ocn(io,dum_i,dum_j,k)
+                                  loc_bio_remin(io,k) = loc_bio_remin(io,k) - par_bio_prefremin_DONr_factor*loc_bio_remin_DOMRphoto(k)*conv_DOM_POM(is,io)*ocn(io,dum_i,dum_j,k)
+                               else
+                                  loc_bio_part(is,k)  = loc_bio_part(is,k)  + loc_bio_remin_DOMRphoto(k)*conv_DOM_POM(is,io)*ocn(io,dum_i,dum_j,k)
+                                  loc_bio_remin(io,k) = loc_bio_remin(io,k) - loc_bio_remin_DOMRphoto(k)*conv_DOM_POM(is,io)*ocn(io,dum_i,dum_j,k)
+                               end if
+                               
+                               if (io .EQ. io_DOM_Cr) then                                  
+                                  DOCr_photodeg(dum_i,dum_j,k) = loc_bio_remin_DOMRphoto(k)*conv_DOM_POM(is,io)*ocn(io,dum_i,dum_j,k)
+                               end if
+! MG 07/2022 MESMO 3c end
+                               
+                               photodeg_counter = 1
                             end if
                          end if
                          
                          if (DOCR_VENT_FLAG) then
                             if (goldstein_ridge_mask(dum_i,dum_j,k) == 1) then !JZ hydrothermal degradation at ridges PLUS background degradation, skip BG below
-                               loc_bio_part(is,k)  = loc_bio_part(is,k) + &
-                                                        vent_frac(dum_i,dum_j,k) *loc_bio_remin_DOMRvent *conv_DOM_POM(is,io)*ocn(io,dum_i,dum_j,k) + & !JZ hydrothermal
-                                                     (1-vent_frac(dum_i,dum_j,k))*loc_bio_remin_DOMRratio*conv_DOM_POM(is,io)*ocn(io,dum_i,dum_j,k) !JZ background
-                               loc_bio_remin(io,k) = loc_bio_remin(io,k) -  &
-                                                        vent_frac(dum_i,dum_j,k) *loc_bio_remin_DOMRvent *conv_DOM_POM(is,io)*ocn(io,dum_i,dum_j,k) - & !JZ hydrothermal
-                                                     (1-vent_frac(dum_i,dum_j,k))*loc_bio_remin_DOMRratio*conv_DOM_POM(is,io)*ocn(io,dum_i,dum_j,k) !JZ background     
+!km 9/22                               loc_bio_part(is,k)  = loc_bio_part(is,k) + &
+!km 9/22                                                        vent_frac(dum_i,dum_j,k) *loc_bio_remin_DOMRvent *conv_DOM_POM(is,io)*ocn(io,dum_i,dum_j,k) + & !JZ hydrothermal
+!km 9/22                                                     (1-vent_frac(dum_i,dum_j,k))*loc_bio_remin_DOMRratio*conv_DOM_POM(is,io)*ocn(io,dum_i,dum_j,k) !JZ background
+!km 9/22                               loc_bio_remin(io,k) = loc_bio_remin(io,k) -  &
+!km 9/22                                                        vent_frac(dum_i,dum_j,k) *loc_bio_remin_DOMRvent *conv_DOM_POM(is,io)*ocn(io,dum_i,dum_j,k) - & !JZ hydrothermal
+!km 9/22                                                     (1-vent_frac(dum_i,dum_j,k))*loc_bio_remin_DOMRratio*conv_DOM_POM(is,io)*ocn(io,dum_i,dum_j,k) !JZ background     
+! MG 07/2022 MESMO 3c start
+                               if (io .EQ. io_DOM_Pr) then
+                                  loc_bio_part(is,k)  = loc_bio_part(is,k) + &
+                                                           vent_frac(dum_i,dum_j,k) *par_bio_prefremin_DOPr_factor*loc_bio_remin_DOMRvent *conv_DOM_POM(is,io)*ocn(io,dum_i,dum_j,k) + & !MG hydrothermal - DOPr
+                                                        (1-vent_frac(dum_i,dum_j,k))*par_bio_prefremin_DOPr_factor*loc_bio_remin_DOMRratio(k)*conv_DOM_POM(is,io)*ocn(io,dum_i,dum_j,k) !MG background - DOPr
+                                  loc_bio_remin(io,k) = loc_bio_remin(io,k) -  &
+                                                           vent_frac(dum_i,dum_j,k) *par_bio_prefremin_DOPr_factor*loc_bio_remin_DOMRvent *conv_DOM_POM(is,io)*ocn(io,dum_i,dum_j,k) - & !MG hydrothermal - DOPr
+                                                        (1-vent_frac(dum_i,dum_j,k))*par_bio_prefremin_DOPr_factor*loc_bio_remin_DOMRratio(k)*conv_DOM_POM(is,io)*ocn(io,dum_i,dum_j,k) !MG background - DOPr
+                               else if (io .EQ. io_DOM_Nr) then
+                                  loc_bio_part(is,k)  = loc_bio_part(is,k) + &
+                                                           vent_frac(dum_i,dum_j,k) *par_bio_prefremin_DONr_factor*loc_bio_remin_DOMRvent *conv_DOM_POM(is,io)*ocn(io,dum_i,dum_j,k) + & !MG hydrothermal - DONr
+                                                        (1-vent_frac(dum_i,dum_j,k))*par_bio_prefremin_DONr_factor*loc_bio_remin_DOMRratio(k)*conv_DOM_POM(is,io)*ocn(io,dum_i,dum_j,k) !MG background - DONr
+                                  loc_bio_remin(io,k) = loc_bio_remin(io,k) -  &
+                                                           vent_frac(dum_i,dum_j,k) *par_bio_prefremin_DONr_factor*loc_bio_remin_DOMRvent *conv_DOM_POM(is,io)*ocn(io,dum_i,dum_j,k) - & !MG hydrothermal - DONr
+                                                        (1-vent_frac(dum_i,dum_j,k))*par_bio_prefremin_DONr_factor*loc_bio_remin_DOMRratio(k)*conv_DOM_POM(is,io)*ocn(io,dum_i,dum_j,k) !MG background - DONr
+                               else                                 
+                                  loc_bio_part(is,k)  = loc_bio_part(is,k) + &
+                                                           vent_frac(dum_i,dum_j,k) *loc_bio_remin_DOMRvent *conv_DOM_POM(is,io)*ocn(io,dum_i,dum_j,k) + & !JZ hydrothermal
+                                                        (1-vent_frac(dum_i,dum_j,k))*loc_bio_remin_DOMRratio(k)*conv_DOM_POM(is,io)*ocn(io,dum_i,dum_j,k) !JZ background
+                                  loc_bio_remin(io,k) = loc_bio_remin(io,k) -  &
+                                                           vent_frac(dum_i,dum_j,k) *loc_bio_remin_DOMRvent *conv_DOM_POM(is,io)*ocn(io,dum_i,dum_j,k) - & !JZ hydrothermal
+                                                        (1-vent_frac(dum_i,dum_j,k))*loc_bio_remin_DOMRratio(k)*conv_DOM_POM(is,io)*ocn(io,dum_i,dum_j,k) !JZ background
+                               end if
+                               if (io .EQ. io_DOM_Cr) then
+                                  DOCr_vent_deg(dum_i,dum_j,k) = vent_frac(dum_i,dum_j,k)*loc_bio_remin_DOMRvent*conv_DOM_POM(is,io)*ocn(io,dum_i,dum_j,k) ! MG vent deg output variable
+                                  DOCr_bk_deg(dum_i,dum_j,k) = (1-vent_frac(dum_i,dum_j,k))*loc_bio_remin_DOMRratio(k)*conv_DOM_POM(is,io)*ocn(io,dum_i,dum_j,k) ! MG background deg output variable for vent layer
+                               end if    
+! MG 07/2022 MESMO 3c end
                             end if
                          end if   
                          
                          if (DOCR_BK_FLAG) then      ! background degradation
                             if (photodeg_counter == 0) then
                                if (goldstein_ridge_mask(dum_i,dum_j,k) == 0) then
-                                  loc_bio_part(is,k)  = loc_bio_part(is,k)  + loc_bio_remin_DOMRratio*conv_DOM_POM(is,io)*ocn(io,dum_i,dum_j,k)
-                                  loc_bio_remin(io,k) = loc_bio_remin(io,k) - loc_bio_remin_DOMRratio*conv_DOM_POM(is,io)*ocn(io,dum_i,dum_j,k)
+!km 9/22                                  loc_bio_part(is,k)  = loc_bio_part(is,k)  + loc_bio_remin_DOMRratio*conv_DOM_POM(is,io)*ocn(io,dum_i,dum_j,k)
+!km 9/22                                  loc_bio_remin(io,k) = loc_bio_remin(io,k) - loc_bio_remin_DOMRratio*conv_DOM_POM(is,io)*ocn(io,dum_i,dum_j,k)
+
+! MG 07/2022 MESMO 3c start
+                                  if (io .EQ. io_DOM_Pr) then
+                                     loc_bio_part(is,k)  = loc_bio_part(is,k)  + par_bio_prefremin_DOPr_factor*loc_bio_remin_DOMRratio(k)*conv_DOM_POM(is,io)*ocn(io,dum_i,dum_j,k) !pref remin rate for DOPr MG 01/28/22
+                                     loc_bio_remin(io,k) = loc_bio_remin(io,k) - par_bio_prefremin_DOPr_factor*loc_bio_remin_DOMRratio(k)*conv_DOM_POM(is,io)*ocn(io,dum_i,dum_j,k) !pref remin rate for DOPr MG 01/28/22
+                                  else if (io .EQ. io_DOM_Nr) then
+                                     loc_bio_part(is,k)  = loc_bio_part(is,k)  + par_bio_prefremin_DONr_factor*loc_bio_remin_DOMRratio(k)*conv_DOM_POM(is,io)*ocn(io,dum_i,dum_j,k) !pref remin rate for DONr MG 01/28/22
+                                     loc_bio_remin(io,k) = loc_bio_remin(io,k) - par_bio_prefremin_DONr_factor*loc_bio_remin_DOMRratio(k)*conv_DOM_POM(is,io)*ocn(io,dum_i,dum_j,k) !pref remin rate for DONr MG 01/28/22
+                                  else
+                                     loc_bio_part(is,k)  = loc_bio_part(is,k)  + loc_bio_remin_DOMRratio(k)*conv_DOM_POM(is,io)*ocn(io,dum_i,dum_j,k)
+                                     loc_bio_remin(io,k) = loc_bio_remin(io,k) - loc_bio_remin_DOMRratio(k)*conv_DOM_POM(is,io)*ocn(io,dum_i,dum_j,k)
+                                  end if
+                                  if (io .EQ. io_DOM_Cr) then
+                                     DOCr_bkg_deg(dum_i,dum_j,k) = loc_bio_remin_DOMRratio(k)*conv_DOM_POM(is,io)*ocn(io,dum_i,dum_j,k) ! MG background deg output variable for rest of ocean
+                                  end if
+! MG 07/2022 MESMO 3c end
+
                                else                  ! vent grids...only do background decay if not have done vent decay above
                                   if (.not. DOCR_VENT_FLAG) then
-                                     loc_bio_part(is,k)  = loc_bio_part(is,k)  + loc_bio_remin_DOMRratio*conv_DOM_POM(is,io)*ocn(io,dum_i,dum_j,k)
-                                     loc_bio_remin(io,k) = loc_bio_remin(io,k) - loc_bio_remin_DOMRratio*conv_DOM_POM(is,io)*ocn(io,dum_i,dum_j,k)
+!km 9/22                                     loc_bio_part(is,k)  = loc_bio_part(is,k)  + loc_bio_remin_DOMRratio*conv_DOM_POM(is,io)*ocn(io,dum_i,dum_j,k)
+!km 9/22                                     loc_bio_remin(io,k) = loc_bio_remin(io,k) - loc_bio_remin_DOMRratio*conv_DOM_POM(is,io)*ocn(io,dum_i,dum_j,k)
+! MG 07/2022 MESMO 3c start
+                                     if (io .EQ. io_DOM_Pr) then
+                                        loc_bio_part(is,k)  = loc_bio_part(is,k)  + par_bio_prefremin_DOPr_factor*loc_bio_remin_DOMRratio(k)*conv_DOM_POM(is,io)*ocn(io,dum_i,dum_j,k)
+                                        loc_bio_remin(io,k) = loc_bio_remin(io,k) - par_bio_prefremin_DOPr_factor*loc_bio_remin_DOMRratio(k)*conv_DOM_POM(is,io)*ocn(io,dum_i,dum_j,k)
+                                     else if (io .EQ. io_DOM_Nr) then
+                                        loc_bio_part(is,k)  = loc_bio_part(is,k)  + par_bio_prefremin_DONr_factor*loc_bio_remin_DOMRratio(k)*conv_DOM_POM(is,io)*ocn(io,dum_i,dum_j,k)
+                                        loc_bio_remin(io,k) = loc_bio_remin(io,k) - par_bio_prefremin_DONr_factor*loc_bio_remin_DOMRratio(k)*conv_DOM_POM(is,io)*ocn(io,dum_i,dum_j,k)
+                                     else
+                                        loc_bio_part(is,k)  = loc_bio_part(is,k)  + loc_bio_remin_DOMRratio(k)*conv_DOM_POM(is,io)*ocn(io,dum_i,dum_j,k)
+                                        loc_bio_remin(io,k) = loc_bio_remin(io,k) - loc_bio_remin_DOMRratio(k)*conv_DOM_POM(is,io)*ocn(io,dum_i,dum_j,k)
+                                     end if
+! MG 07/2022 MESMO 3c end
+
                                   end if
                                end if
                             end if
@@ -1867,21 +2045,25 @@ CONTAINS
           do l=1,n_ismax
              is = conv_iselected_is(l)
              loc_tot_i = conv_sed_ocn_i(0,is)
-!             print*,' POM --> DIM, is, loc_tot_i: ', is, loc_tot_i
+!km 4/22             print*,'POM --> DIM, is, loc_tot_i: ', is, loc_tot_i
              
              do loc_i=1,loc_tot_i
                 io = conv_sed_ocn_i(loc_i,is)
+!km 4/22                print*,' io, loc_bio_remin ',io,loc_bio_remin(io,k)
+
                 ! Taking into account of flexible -O2:C   tata 180917
                 if(io.eq.io_O2.and.is_POC) then
-!                   print*,' O2 depletion due to DOM(r) remin...does this happen?'
                    loc_bio_remin(io,k) = loc_bio_remin(io,k) + bio_red_DOC_DO2(dum_i,dum_j,k)*loc_bio_part(is,k)
+!km 4/22                   print*,'  O2 depletion: bio_red_DOC_DO2: ',bio_red_DOC_DO2(dum_i,dum_j,k)
+!km 4/22                   print*,'  O2 depletion: bio_part_red_DOC_DO2: ',bio_part_red_POC_PO2(dum_i,dum_j,k)
                 else
                    loc_bio_remin(io,k) = loc_bio_remin(io,k) + conv_sed_ocn(io,is)*loc_bio_part(is,k)
+!km 4/22                   print*,'  Not O2, not POC: conv_sed_ocn: ', conv_sed_ocn(io,is)
                 endif
-!                print*,'  io, conv_sed_ocn: ', io, conv_sed_ocn(io,is)
-            end do
+!km 4/22                print*,'  loc_bio_part, loc_bio_remin ',loc_bio_part(is,k),loc_bio_remin(io,k)
+
+             end do
           end DO
-!          print*,''
 
        IF ( ocn(io_DOM_C,dum_i,dum_j,k) <= loc_DOM_C_min .AND. &
           & ocn(io_DOM_N,dum_i,dum_j,k) <= loc_DOM_N_min .AND. &
@@ -1889,7 +2071,7 @@ CONTAINS
           & ocn(io_DOM_P,dum_i,dum_j,k) <= loc_DOM_P_min .AND. &
           & ocn(io_DOM_Fe,dum_i,dum_j,k) <= loc_DOM_Fe_min) then
 !       ELSE   
-          ! Adjustment to get rid of negative or excessively small DOM concentrations (needed for spinup runs)
+          ! Adjustment to get rid of negative or extremely small DOM concentrations (still needed for spinup runs)
           ! DIP -> DOP, DIN -> DON, DIC -> DOC
           ! Tata 181020
           loc_bio_remin(io_DOM_C,k) = loc_bio_remin(io_DOM_C,k) - ocn(io_DOM_C,dum_i,dum_j,k) + loc_DOM_C_min
@@ -1953,10 +2135,11 @@ CONTAINS
     real,dimension(0:n_sed,n_maxk)::loc_bio_part
     real,dimension(0:n_ocn,n_maxk)::loc_bio_remin
     real,dimension(0:n_sed,n_maxk)::loc_bio_settle
-
+! MG 07/2022 MESMO 3c start
+    real,dimension(n_maxk)::loc_DOCr_prod_split2, loc_DOCsl_prod_split2
+! MG 07/2022 MESMO 3c end
     real::ktemp, r0, dcdt, O2ratio, newtemp, loc_tc_anom, junkst,tv1,tv2,tv3,tv4
     real,allocatable::tv_x(:)
-    real::loc_bio_part_TMPs, loc_bio_part_POC_ratios
     real::delta_PON, delta_NO3, delta_NO3_15N 
     real::loc_delta,loc_alpha,loc_r15N,loc_depth
   
@@ -1964,6 +2147,7 @@ CONTAINS
     real::loc_o2_lim,loc_potO2,loc_potNO3,loc_NO3_lim,loc_o2_mm,loc_NO3_mm,loc_NO3_limmax,loc_NO3_remin,loc_NO3 ! Tata 180130
     real::loc_o2_crit,loc_np_inv ! Tata 180312
     real::loc_DOMRfrac
+!km 4/22    real::loc_DOMfrac,loc_DOMRfrac,loc_DOMsplit,loc_POMsplit,loc_DOMsplit_sl,loc_DOMsplit_r
     
 
     ! *** USER-DEFINABLE OPTIONS ***
@@ -1995,7 +2179,11 @@ CONTAINS
        io = conv_iselected_io(l)
        loc_bio_remin(io,:) = 0.0
     end do
-    
+! MG 07/2022 MESMO 3c start
+    loc_DOCr_prod_split2(:) = 0.0
+    loc_DOCsl_prod_split2(:) = 0.0
+! MG 07/2022 MESMO 3c end    
+
     allocate(tv_x(par_bio_numspec)) ! Tata 171030
     ! >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
     ! *** k WATER-COLUMN LOOP START ***
@@ -2010,27 +2198,30 @@ CONTAINS
        ! Flexible O2:C remin ratio Tata 180605
        ! Caluclate particle average POC:PO2 and POP:PO2 Tata 180605 following Buchanan et al. (2018) GBC, Tanioka and Matsumoto (2018), NG
        ! O2:P = -((1+f)C:P+2N:P), O2:C = -((1+f) + 2N:C) 
-          loc_bio_part_red_POP_PO2 = -1.0*((1.0+par_bio_remin_fvalue)*bio_settle(is_POC,dum_i,dum_j,k)/bio_settle(is_POP,dum_i,dum_j,k) + &
-           & 2.0*bio_settle(is_PON,dum_i,dum_j,k)/bio_settle(is_POP,dum_i,dum_j,k))
-          loc_bio_part_red_POC_PO2 = -1.0*(1.0+par_bio_remin_fvalue + 2.0*bio_settle(is_PON,dum_i,dum_j,k)/bio_settle(is_POC,dum_i,dum_j,k)) ! Tata 181016
-          if (abs(loc_bio_part_red_POC_PO2) > (1.0 + par_bio_remin_fvalue) .AND. abs(loc_bio_part_red_POP_PO2) > const_real_nullsmall) then
-             bio_part_red_POP_PO2(dum_i,dum_j,k) = loc_bio_part_red_POP_PO2    ! Tata 181017
-             bio_part_red_POC_PO2(dum_i,dum_j,k) = loc_bio_part_red_POC_PO2    ! Tata 181017
-          else
-             bio_part_red_POC_PO2(dum_i,dum_j,k) = conv_sed_ocn(io_O2,is_POC)    ! Tata 181017
-             bio_part_red_POP_PO2(dum_i,dum_j,k) = bio_part_red_POC_PO2(dum_i,dum_j,k)*par_bio_red_POP_POC    ! Tata 181017
-          endif
+       loc_bio_part_red_POP_PO2 = -1.0*((1.0+par_bio_remin_fvalue)*bio_settle(is_POC,dum_i,dum_j,k)/bio_settle(is_POP,dum_i,dum_j,k) + &
+        & 2.0*bio_settle(is_PON,dum_i,dum_j,k)/bio_settle(is_POP,dum_i,dum_j,k))
+       loc_bio_part_red_POC_PO2 = -1.0*(1.0+par_bio_remin_fvalue + 2.0*bio_settle(is_PON,dum_i,dum_j,k)/bio_settle(is_POC,dum_i,dum_j,k)) ! Tata 181016
 
-          if (.NOT. FLEX_REMINRATIO) then    ! Fixed -O2:C
-            bio_part_red_POC_PO2(dum_i,dum_j,k) = conv_sed_ocn(io_O2,is_POC)
-            if (bio_settle(is_POP,dum_i,dum_j,k) > const_real_nullsmall .AND. bio_settle(is_POC,dum_i,dum_j,k) > const_real_nullsmall) then
-               bio_part_red_POP_PO2(dum_i,dum_j,k) = bio_part_red_POC_PO2(dum_i,dum_j,k)*bio_settle(is_POC,dum_i,dum_j,k)/bio_settle(is_POP,dum_i,dum_j,k)    ! Tata 181017
-            else
-               bio_part_red_POP_PO2(dum_i,dum_j,k) = bio_part_red_POC_PO2(dum_i,dum_j,k)*par_bio_red_POP_POC    ! Tata 181017
-            endif
-          endif
+       if (abs(loc_bio_part_red_POC_PO2) > (1.0 + par_bio_remin_fvalue) .AND. abs(loc_bio_part_red_POP_PO2) > const_real_nullsmall) then
+          bio_part_red_POP_PO2(dum_i,dum_j,k) = loc_bio_part_red_POP_PO2    ! Tata 181017
+          bio_part_red_POC_PO2(dum_i,dum_j,k) = loc_bio_part_red_POC_PO2    ! Tata 181017
+       else
+          bio_part_red_POC_PO2(dum_i,dum_j,k) = conv_sed_ocn(io_O2,is_POC)    ! Tata 181017
+          bio_part_red_POP_PO2(dum_i,dum_j,k) = bio_part_red_POC_PO2(dum_i,dum_j,k)*par_bio_red_POP_POC    ! Tata 181017
+       endif
 
-      If (loc_bio_part_OLD(is_POC,k) > const_real_nullsmall) then
+       if (.NOT. FLEX_REMINRATIO) then    ! Fixed -O2:C
+         bio_part_red_POC_PO2(dum_i,dum_j,k) = conv_sed_ocn(io_O2,is_POC)
+         if (bio_settle(is_POP,dum_i,dum_j,k) > const_real_nullsmall .AND. bio_settle(is_POC,dum_i,dum_j,k) > const_real_nullsmall) then
+            bio_part_red_POP_PO2(dum_i,dum_j,k) = bio_part_red_POC_PO2(dum_i,dum_j,k)*bio_settle(is_POC,dum_i,dum_j,k)/bio_settle(is_POP,dum_i,dum_j,k)    ! Tata 181017
+         else
+            bio_part_red_POP_PO2(dum_i,dum_j,k) = bio_part_red_POC_PO2(dum_i,dum_j,k)*par_bio_red_POP_POC    ! Tata 181017
+         endif
+       endif
+
+       ! Remineralize only if there is some particle mass
+       If (loc_bio_part_OLD(is_POC,k) > const_real_nullsmall) then
+             
           ! if the identified particulate material is already residing in the bottom-most ocean layer, flag as sediment flux
           If (k == dum_k1) then
              loc_bio_remin_min_k = dum_k1 - 1
@@ -2058,12 +2249,23 @@ CONTAINS
              loc_bio_part_TMP(is,k) = loc_bio_part_OLD(is,k)
           end do
 
+!          print*,'kloop: k, loc_bio_part_TMP(POP) ',k,loc_bio_part_TMP(is_POP,:)
+!          print*,' n_ismax, n_iomax ',n_ismax,n_iomax
+!          do is=1,n_ismax
+!             do io=1,n_iomax
+!                if ( abs(conv_sed_ocn(io,is))  .gt.const_real_nullsmall) print*,' io,is,conv_sed_ocn: ',  io,is,conv_sed_ocn(io,is)
+!                if ( abs(conv_sed_ocn_2(io,is)).gt.const_real_nullsmall) print*,' io,is,conv_sed_ocn_2: ',io,is,conv_sed_ocn_2(io,is)
+!                if ( abs(conv_ocn_sed(is,io))  .gt.const_real_nullsmall) print*,' io,is,conv_ocn_sed: ',  io,is,conv_ocn_sed(is,io)
+!                if ((is==is_POP).and.(io==(20.or.53))) print*,' isPOP/ioDOP,ioDOPr ',io,is,conv_sed_ocn(io,is),io,is,conv_sed_ocn_2(io,is)
+!             end do
+!          end do
+          
           ! >>>>>>>>>>>>>>>>>>>>>>>>>
           ! *** kk SUB-LOOP START ***
           ! >>>>>>>>>>>>>>>>>>>>>>>>>
 
           ! for each of the three (POC, CaCO3, and opal) primary remineralizable species (if selected),
-          ! loop down remineralization column identified previously;
+          ! loop down the water column (kk) from where the particle was identified (k) and carry out remineralization;
           ! (1) calculating the fractional remineralization in each layer, moving the particulate remainder to the layer below
           ! (2) calculate tracer remineralization from particulate supply from layer above
           ! (3) update particulate tracer field for current layer
@@ -2072,16 +2274,19 @@ CONTAINS
           !       corrections must be made for changes in ocean layer thickness
           junkst = 0.0
           k2loop : do kk=k-1,loc_bio_remin_min_k,-1
+!             print*,'k2loop: k, loc_bio_part_TMP(POP) ',k,loc_bio_part_TMP(is_POP,:)
              ! test to see whether the ocean bottom has been reached
              If (kk >= dum_k1) then                
                 ! calculate ratio of layer thicknesses
                 ! (used to convert particulate matter concentrations as particulates settle through the water column
                 !  comprising layers of non-uniform thickness)
-                loc_bio_remin_layerratio = phys_ocn(ipo_dD,dum_i,dum_j,kk+1)/phys_ocn(ipo_dD,dum_i,dum_j,kk)     ! layer thickness above/thickness below (ratio)
-                loc_bio_remin_dD = phys_ocn(ipo_dD,dum_i,dum_j,kk)                                               !layer thickness(kk) in meters
+                loc_bio_remin_layerratio = phys_ocn(ipo_dD,dum_i,dum_j,kk+1)/phys_ocn(ipo_dD,dum_i,dum_j,kk)     ! layer thickness above/thickness below
+                loc_bio_remin_dD = phys_ocn(ipo_dD,dum_i,dum_j,kk)                                               ! layer thickness(kk) in meters
                 ! calculate residence time (yr) of particulates in ocean layer (from layer thickness and sinking speed)
                 if (loc_bio_remin_sinkingrate > const_real_nullsmall) loc_bio_remin_dt = loc_bio_remin_dD/loc_bio_remin_sinkingrate     !!residence time in layer kk (years)
-                
+
+!                print*,' layer ratio ',loc_bio_remin_layerratio
+
                 junkst = junkst + loc_bio_remin_dt                                        ! check for sinking too far down
                 if (junkst > dum_dtyr) then
                    loc_bio_remin_dt = loc_bio_remin_dt - ( junkst - dum_dtyr )            ! residence time in partial layer (yrs)
@@ -2093,7 +2298,7 @@ CONTAINS
                 
                 ! *** Calculate fractional change in particulate fluxes ***
                 ! PARTICULATE ORGANIC MATTER
-                if (sed_select(is_POC)) then
+                if (sed_select(is_POC)) then                 
                    If (.NOT. opt_bio(iopt_bio_remin_POC_fixed)) then
                       ! by M.Chikamoto 2006-06-30 
                       ! calculate residence time in each ocean layer
@@ -2122,7 +2327,7 @@ CONTAINS
                            & *en_tempwt*exp(ktemp*(ocn(io_T,dum_i,dum_j,kk)-273.15))   !this is done if not messing with the oxygen (default)
                       endif
 
-                      ! km 12/2018: add depth dependent remin rate when opt_remin_POC_z=1
+                      ! km 12/2018: add depth-dependent remin rate only when opt_remin_POC_z=1; no change otherwise
                       loc_depth = phys_ocn(ipo_Dmid,dum_i,dum_j,kk)
                       loc_bio_remin_POC_frac1 = loc_bio_remin_POC_frac1 &
                            & *exp(-loc_depth/par_bio_remin_k*opt_remin_POC_z)
@@ -2145,24 +2350,27 @@ CONTAINS
                       loc_bio_remin_POC_frac1 = (1.0 - EXP(-loc_bio_remin_dD/par_bio_remin_POC_eL1))
                       loc_bio_remin_POC_frac2 = (1.0 - EXP(-loc_bio_remin_dD/par_bio_remin_POC_eL2))
                    end if
+
+!km 4/22                   ! km 3/2022 when deep POM split is activated, there is no POM remineralization
+!km 4/22                   if (DOCR_DEEPPOCSPLIT) then
+!km 4/22                      loc_bio_remin_POC_frac1 = c0
+!km 4/22                      loc_bio_remin_POC_frac2 = c0
+!km 4/22                   endif
+                   
                    ! calculate the ratio of particulate tracer between layers
                    loc_bio_part_POC_ratio = 1.0 - &
                         & ( &
                         &   (1.0 - loc_bio_part_TMP(is_POC_frac2,kk+1))*loc_bio_remin_POC_frac1 + &
                         &          loc_bio_part_TMP(is_POC_frac2,kk+1) *loc_bio_remin_POC_frac2 &
                         & )
+                   
+!                   print*,' kk, loc_bio_part_POC_ratio, ',kk, loc_bio_part_POC_ratio
+                                      
                    ! calculate potential oxidation capacity
                    loc_potO2cap = fun_potO2cap(ocn_select(:),ocn(:,dum_i,dum_j,kk),bio_remin(:,dum_i,dum_j,kk))
                    ! compare with potential oxygen availability and modify fraction remineralized accordingl
                    loc_O2demand = bio_part_red_POC_PO2(dum_i,dum_j,k)* &
                            & loc_bio_remin_layerratio*loc_bio_part_POC_ratio*loc_bio_part_TMP(is_POC,kk+1)
-                   ! decrease effective remin fraction to take into account depletion of electon acceptors
-                   ! This does not make sense- less O2 should lead to bigger loc_bio_part_POC_ratio (more POC left over)
-                   ! Commented out, Tata 2018-01-29
-                   !   if ((loc_O2demand > loc_potO2cap) .AND. (loc_O2demand > const_real_nullsmall)) then
-                   !      loc_bio_part_POC_ratio = (loc_potO2cap/loc_O2demand)*loc_bio_part_POC_ratio
-                         
-                   !   end if
 
                    ! calculate change in partitioning between different fractions
                    is = is_POC_frac2
@@ -2290,14 +2498,77 @@ CONTAINS
                    is = conv_iselected_is(l)
                    ! particulate organic matter (plus elemental components, and particle-reactive scavenged elements)
                    !by M.Chikamoto 07-26-2007 15N 
- 
+
+!                   print*,'Particle conc...which is and kk? ',is,kk
+                   
                    if ((sed_dep(is) == is_POC) .or. (sed_type(is) == par_sed_type_POM)) then 
                       if (sed_type(is) == par_sed_type_scavenged) then
                          loc_bio_part_TMP(is,kk) = loc_bio_part_TMP(is,kk+1)* &
                               & loc_bio_remin_layerratio*(1.0 - par_scav_Fe_remin*(1.0 - loc_bio_part_POC_ratio))
                       else
-                         loc_bio_part_TMP(is,kk) = loc_bio_part_TMP(is,kk+1)* &
-                              & loc_bio_remin_layerratio*loc_bio_part_POC_ratio
+!km 4/22                         IF (DOCR_DEEPPOCSPLIT) then    ! km 3/2022
+!km 4/22                            ! use fDOMr determined in sub_calc_bio_uptake (prescribed or formula like Dunne) at surface (k=16)
+!km 4/22                            loc_DOMfrac = sum(bio_part_DOMfrac(dum_i,dum_j,15:16))/2
+!km 4/22!                            loc_DOMfrac = 0.67
+!km 4/22
+!km 4/22                            ! split sinking POM into POM and DOM
+!km 4/22                            loc_POMsplit = (1-loc_DOMfrac)*loc_bio_part_TMP(is,kk+1)*loc_bio_remin_layerratio
+!km 4/22                            loc_DOMsplit =    loc_DOMfrac *loc_bio_part_TMP(is,kk+1)*loc_bio_remin_layerratio
+!km 4/22
+!km 4/22                            loc_bio_part_TMP(is,kk) = loc_POMsplit    ! POM that remains POM after the split
+!km 4/22                            
+!km 4/22                            loc_tot_i = conv_sed_ocn_2_i(0,is)
+!km 4/22
+!km 4/22!                            if (is.eq.is_POP) then
+!km 4/22!                               print*,'Deep split...which is and kk? ',is,kk
+!km 4/22!                               print*,' fDOM, loc_tot_i: ', loc_DOMfrac, loc_tot_i
+!km 4/22!                               print*,' loc_bio_part_TMP(is,kk+1) ',loc_bio_part_TMP(is,kk+1)
+!km 4/22!                               print*,' loc_bio_part_TMP(is,kk) ',loc_bio_part_TMP(is,kk)
+!km 4/22!                            end if
+!km 4/22                            
+!km 4/22                            do loc_i=1,loc_tot_i
+!km 4/22                               io  = conv_sed_ocn_2_i(loc_i,is)
+!km 4/22                               io2 = conv_sed_ocn_2_i2(loc_i,is)    ! zero for DOM, nonzero for DOMr
+!km 4/22                               
+!km 4/22                               loc_DOMRfrac = par_bio_red_DOMRfrac  ! prescribed in biogem_config.par
+!km 4/22
+!km 4/22!                               if (is.eq.is_POP) print*,' io, io2, fDOMr ', io, io2, loc_DOMRfrac
+!km 4/22                               
+!km 4/22                               if (ocn_select(io)) then             ! possible for DOFe to be selected but DOFer not
+!km 4/22                                  if (conv_POM_DOM(io,is) > 0) then !POM => DOM/DOMr
+!km 4/22                                     if (.not. ocn_select(conv_POM_DOM_i(2,is)) ) loc_DOMRfrac = c0 ! DOM selected but not DOMr...like DOFer
+!km 4/22
+!km 4/22                                     loc_DOMsplit_sl = (1-loc_DOMRfrac)*loc_DOMsplit   ! POM that is broken down into DOMsl
+!km 4/22                                     loc_DOMsplit_r  =    loc_DOMRfrac *loc_DOMsplit   ! POM that is broken down into DOMr
+!km 4/22
+!km 4/22                                     !print*,'  after io select...fDOMr ',loc_DOMRfrac
+!km 4/22
+!km 4/22                                     if (io2 > 0) then              !POM => DOMr
+!km 4/22                                        loc_bio_remin(io,kk) = loc_bio_remin(io,kk) + loc_DOMsplit_r *conv_sed_ocn_2(io,is)
+!km 4/22 !                                       if (is.eq.is_POP) print*,'  POM->DOMr, loc_bio_remin(io,kk) ', loc_bio_remin(io,kk)
+!km 4/22                                     else                           !POM => DOM (and remaining to POM)
+!km 4/22                                        loc_bio_remin(io,kk) = loc_bio_remin(io,kk) + loc_DOMsplit_sl*conv_sed_ocn_2(io,is)
+!km 4/22 !                                       if (is.eq.is_POP) print*,'  POM->DOMsl, loc_bio_remin(io,kk) ', loc_bio_remin(io,kk)
+!km 4/22                                     endif
+!km 4/22!                                     if (is.eq.is_POP) print*,'  conv_sed_ocn_2(io,is), ',conv_sed_ocn_2(io,is)
+!km 4/22                                                                             
+!km 4/22                                  endif
+!km 4/22                               endif
+!km 4/22                            enddo
+!km 4/22                         ! no deep POM split   
+!km 4/22                         ELSE
+                            loc_bio_part_TMP(is,kk) = loc_bio_part_TMP(is,kk+1)* &
+                                 & loc_bio_remin_layerratio*loc_bio_part_POC_ratio
+
+!                            if (is.eq.is_POP) then
+!                               print*,'Deep split of POP...which is and kk? ',is,kk
+!                               print*,' loc_bio_part_TMP(is,kk+1) ',loc_bio_part_TMP(is,kk+1)
+!                               print*,' loc_bio_part_TMP(is,kk) ',loc_bio_part_TMP(is,kk)
+!                               print*,' loc_bio_remin_layerratio ',loc_bio_remin_layerratio
+!                               print*,' loc_bio_part_POC_ratio ',loc_bio_part_POC_ratio
+!                            end if
+                            
+!km 4/22                         END IF
                       end if
                    end if 
 
@@ -2328,6 +2599,8 @@ CONTAINS
                       loc_bio_part_TMP(is,kk) = loc_bio_remin_layerratio*loc_bio_part_TMP(is,kk+1)
                    end if
                 end do
+
+!                print*,' loc_DOMfrac ',loc_DOMfrac
                 
                 ! *** Calculate increase in tracer concentrations due to particle remineralization ***
                 ! >>> GENERIC ALGORITHM
@@ -2366,40 +2639,59 @@ CONTAINS
 !                   print*,'Particle remin: l, is, loc_tot_i: ',l, is, loc_tot_i
 
                    do loc_i=1,loc_tot_i
-                      
+                      io  = conv_sed_ocn_i(loc_i,is)
+                       
                       IF (DOCR_DEEPPOCSPLIT) then
+!km 4/22                         loc_bio_remin(io,kk) = loc_bio_remin(io,kk)   ! km 3/2022 : no POM remineralization under deep split
+                         
                          io  = conv_sed_ocn_2_i(loc_i,is)
                          io2 = conv_sed_ocn_2_i2(loc_i,is) ! zero for DOM, nonzero for DOMr
 !                         print*,' SPLIT: io, io2: ', io, io2
+!                         print*,'  bf loc_bio_remin(io,kk): ', loc_bio_remin(io,kk)
 
                          if (ocn_select(io)) then          ! possible for DOFe to be selected but DOFer not
                             if (conv_POM_DOM(io,is) > 0) then !POM => DOM/DOMr
-                               
+
                                !km use fDOMr from biogem_config.par...
                                loc_DOMRfrac = par_bio_red_DOMRfrac
                                if (.not. ocn_select(conv_POM_DOM_i(2,is)) ) loc_DOMRfrac = c0 ! DOM selected but DOMr not...like DOFe and DOFer
                                
                                if (io2 > 0) then              !POM => DOMr
-!                                  print*,'  POM->DOMr, conv_sed_ocn_2,loc_DOMRfrac: ', conv_sed_ocn_2(io,is),loc_DOMRfrac
+                                  !print*,'  POM->DOMr, conv_sed_ocn_2,loc_DOMRfrac: ', conv_sed_ocn_2(io,is),loc_DOMRfrac
+                                  !km: (1) particle from kk+1 in k, accounting for volume change only:  loc_bio_remin_layerratio*loc_bio_part_TMP(is,kk+1)
+                                  !km: (2) particle from kk+1 in k, accounting for volume change and remineralization (see above): loc_bio_part_TMP(is,kk))
+                                  !km: (3) particle from kk+1 remineralized in k; i.e., (1)-(2)
                                   loc_bio_remin(io,kk) = loc_bio_remin(io,kk) + loc_DOMRfrac*conv_sed_ocn_2(io,is) &
                                        & *(loc_bio_remin_layerratio*loc_bio_part_TMP(is,kk+1) - loc_bio_part_TMP(is,kk))
+! MG 07/2022 MESMO 3c start
+                                  if (io .EQ. io_DOM_Cr) then 
+                                     loc_DOCr_prod_split2(kk) = loc_DOCr_prod_split2(kk) + (loc_DOMRfrac*conv_sed_ocn_2(io,is) &
+                                          & *(loc_bio_remin_layerratio*loc_bio_part_TMP(is,kk+1)-loc_bio_part_TMP(is,kk))) &
+                                          & *phys_ocn(ipo_M,dum_i,dum_j,kk) ! MG 04/05/22 convert mols/kg -> mols C
+                                  end if
+! MG 07/2022 MESMO 3c end
                                else                           !POM => DOM (and remaining to POM)
-!                                  print*,'  POM->DOM, conv_sed_ocn_2,loc_DOMRfrac: ', conv_sed_ocn_2(io,is),loc_DOMRfrac
+                                  !print*,'  POM->DOMsl, conv_sed_ocn_2,loc_DOMRfrac: ', conv_sed_ocn_2(io,is),loc_DOMRfrac
                                   loc_bio_remin(io,kk) = loc_bio_remin(io,kk) + (1-loc_DOMRfrac)*conv_sed_ocn_2(io,is) &
-!                                     loc_bio_remin(io,kk) = loc_bio_remin(io,kk) + (1-par_bio_red_DOMRfrac)*conv_sed_ocn_2(io,is) &
                                        & *(loc_bio_remin_layerratio*loc_bio_part_TMP(is,kk+1) - loc_bio_part_TMP(is,kk))
+! MG 07/2022 MESMO 3c start                                  
+                                  if (io .EQ. io_DOM_C) then
+                                     loc_DOCsl_prod_split2(kk) = loc_DOCsl_prod_split2(kk) &
+                                          & + ((1-loc_DOMRfrac)*conv_sed_ocn_2(io,is)*(loc_bio_remin_layerratio*loc_bio_part_TMP(is,kk+1)-loc_bio_part_TMP(is,kk))) &
+                                          & *phys_ocn(ipo_M,dum_i,dum_j,kk) ! MG 04/05/22 convert mols/kg -> mols C
+                                  end if
+! MG 07/2022 MESMO 3c end
                                endif
                             
                             !POM => DIM (POM_Fe/det_Fe->Fe, CaCO3->DIC/ALK/Ca, opal->SiO2); conv_POM_DOM(io,is)=0
                             else
-!                               print*,'   POM->DIM conv_sed_ocn: ',conv_sed_ocn(io,is)
+                               !print*,'   POM->DIM conv_sed_ocn: ',conv_sed_ocn(io,is)
                                loc_bio_remin(io,kk) = loc_bio_remin(io,kk) + conv_sed_ocn(io,is) &
                                      & *(loc_bio_remin_layerratio*loc_bio_part_TMP(is,kk+1) - loc_bio_part_TMP(is,kk))          
                             endif
                          endif
-                      ELSE                                 ! no deep split: POM is entirely respired to DIM with loss of oxygen
-                         io  = conv_sed_ocn_i(loc_i,is)
- !                         print*,' NO SPLIT: io, conv_sed_ocn: ', io, conv_sed_ocn(io,is)
+                      ELSE                                 ! no deep split: POM is respired to DIM with loss of oxygen
+                         !print*,' NO SPLIT: io, conv_sed_ocn: ', io, conv_sed_ocn(io,is)
                    
                          ! Taking into account of flexible -O2:C   tata 180917
                          if(io.eq.io_O2.and.is.eq.is_POC) then
@@ -2422,6 +2714,15 @@ CONTAINS
 #endif                   
                          end if
                       END IF
+
+!                      if (is.eq.is_POP) then
+!                         print*,' Particle remin, is, io: ', is, io
+!                         print*,'  loc_bio_part_TMP(is,kk+1) ',loc_bio_part_TMP(is,kk+1) 
+!                         print*,'  loc_bio_part_TMP(is,kk) ',loc_bio_part_TMP(is,kk) 
+!                         print*,'  af loc_bio_remin(io,kk): ', loc_bio_remin(io,kk)
+!                         print*,'  loc_bio_remin_layerratio: ',loc_bio_remin_layerratio
+!                      end if
+                      
                    enddo
                 END DO
 
@@ -2442,6 +2743,7 @@ CONTAINS
                       end if
                    end if
                 endif
+                
              else
                 If (.NOT. opt_misc(iopt_misc_sed_select)) then
                    ! >>> GENERIC ALGORITHM BUT CONTAINS USER-MODIFIABLE INFORMATION IN ARRAY <conv_sed_ocn>
@@ -2453,7 +2755,7 @@ CONTAINS
                       do loc_i=1,loc_tot_i
                          io = conv_sed_ocn_i(loc_i,is)
                          loc_bio_remin(io,kk+1) = loc_bio_remin(io,kk+1) + conv_sed_ocn(io,is)* &
-                              & loc_bio_part_TMP(is,kk+1)
+                              & loc_bio_part_TMP(is,kk+1)                       
                       end do
                    end DO
                 else
@@ -2497,6 +2799,8 @@ CONTAINS
                 end SELECT
              end do
           end do
+
+       ! No particle mass to remineralize; close the "If (loc_bio_part_OLD(is_POC,k) >" conditional
        else
        end IF
 ! ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -2513,33 +2817,33 @@ CONTAINS
 ! Setting Critical O2 conc for denitrification to occur as a function of global N:P
 ! Note: global N:P is calculated inside tstep_biogem at biogem_main.f90
 ! Tata 180312
-    if (PROG_NCYCLE) then
-       loc_NO3_remin = 0
-       loc_potO2 = ocn(io_O2,dum_i,dum_j,k)
-       loc_NO3 = ocn(io_NO3,dum_i,dum_j,k)
-       loc_o2_crit = par_bio_denit_rate * npratio_inventory*1e-6  ! Calculating critical O2 as a funciton of N:P
-       if (loc_o2_crit > par_bio_o2_crit) then ! Set hard bound upper O2 threshold
-           loc_o2_crit = par_bio_o2_crit
-       endif
-       !print*,'O2 crit,N:P,df =', loc_o2_crit,npratio_inventory,par_bio_denit_rate
-       !loc_potO2def = abs(loc_potO2-par_bio_o2_crit) ! 
-       loc_potO2def = abs(loc_potO2-loc_o2_crit) ! Calculating O2 deficit
-       !if ((loc_potO2 < par_bio_o2_crit) .AND. (loc_NO3 > const_real_nullsmall)) then ! original, set threshold
-       if ((loc_potO2 < loc_o2_crit) .AND. (loc_NO3 > const_real_nullsmall)) then !  set threshold
-          if (loc_potO2def < 1.25*loc_NO3) then ! Partial NO3 utilization
-              loc_NO3_remin =  -(2.0/2.5)*loc_potO2def 
-          else   ! Complete NO3 utilization
-              loc_NO3_remin = -loc_NO3
+       if (PROG_NCYCLE) then
+          loc_NO3_remin = 0
+          loc_potO2 = ocn(io_O2,dum_i,dum_j,k)
+          loc_NO3 = ocn(io_NO3,dum_i,dum_j,k)
+          loc_o2_crit = par_bio_denit_rate * npratio_inventory*1e-6  ! Calculating critical O2 as a funciton of N:P
+          if (loc_o2_crit > par_bio_o2_crit) then ! Set hard bound upper O2 threshold
+              loc_o2_crit = par_bio_o2_crit
           endif
-              loc_bio_remin(io_NO3,k) =  loc_bio_remin(io_NO3,k) + loc_NO3_remin
-              loc_bio_remin(io_N2,k)  =  loc_bio_remin(io_N2,k)  - 0.5*loc_NO3_remin
-              loc_bio_remin(io_ALK,k) =  loc_bio_remin(io_ALK,k) - loc_NO3_remin       ! 12/2020 Nfix/denit on ALK
-              loc_bio_remin(io_O2,k)  =  loc_bio_remin(io_O2,k)  - (2.5/2.0)*loc_NO3_remin
-              den_ocn(dum_i,dum_j,k)  = -loc_NO3_remin*phys_ocn(ipo_M,dum_i,dum_j,k) ! molN
-       else
-          den_ocn(dum_i,dum_j,k) = 0.0
+          !print*,'O2 crit,N:P,df =', loc_o2_crit,npratio_inventory,par_bio_denit_rate
+          !loc_potO2def = abs(loc_potO2-par_bio_o2_crit) ! 
+          loc_potO2def = abs(loc_potO2-loc_o2_crit) ! Calculating O2 deficit
+          !if ((loc_potO2 < par_bio_o2_crit) .AND. (loc_NO3 > const_real_nullsmall)) then ! original, set threshold
+          if ((loc_potO2 < loc_o2_crit) .AND. (loc_NO3 > const_real_nullsmall)) then !  set threshold
+             if (loc_potO2def < 1.25*loc_NO3) then ! Partial NO3 utilization
+                 loc_NO3_remin =  -(2.0/2.5)*loc_potO2def 
+             else   ! Complete NO3 utilization
+                 loc_NO3_remin = -loc_NO3
+             endif
+                 loc_bio_remin(io_NO3,k) =  loc_bio_remin(io_NO3,k) + loc_NO3_remin
+                 loc_bio_remin(io_N2,k)  =  loc_bio_remin(io_N2,k)  - 0.5*loc_NO3_remin
+                 loc_bio_remin(io_ALK,k) =  loc_bio_remin(io_ALK,k) - loc_NO3_remin       ! 12/2020 Nfix/denit on ALK
+                 loc_bio_remin(io_O2,k)  =  loc_bio_remin(io_O2,k)  - (2.5/2.0)*loc_NO3_remin
+                 den_ocn(dum_i,dum_j,k)  = -loc_NO3_remin*phys_ocn(ipo_M,dum_i,dum_j,k) ! molN
+          else
+             den_ocn(dum_i,dum_j,k) = 0.0
+          endif
        endif
-    endif
     end do kloop
 
     ! <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<

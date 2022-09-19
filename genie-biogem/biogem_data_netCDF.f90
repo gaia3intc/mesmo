@@ -1607,6 +1607,56 @@ print*,fun_calc_isotope_delta(dum_sfcatm1(ia_pCO2,1,1),dum_sfcatm1(ia_pCO2_13C,1
                & loc_sig, loc_c1, loc_c0) 
        endif
 
+! MG 07/2022 MESMO 3c start          
+       ! Added DOCr photodegradation MG 01/13/22
+       loc_sig = int_DOCr_photodeg_sig/int_t_sig
+       call sub_adddef_netcdf (loc_iou, 1, 'DOCr_photodeg', 'DOCr global photodegradation rate', 'molC yr-1', loc_c1, loc_c0)
+       call sub_putvars ( 'DOCr_photodeg', loc_iou, loc_ntrec, &
+            & loc_sig, loc_c1, loc_c0)
+
+       ! Added DOCr hydrothermal vent degradation MG 01/21/22
+       loc_sig = int_DOCr_vent_deg_sig/int_t_sig
+       call sub_adddef_netcdf (loc_iou, 1, 'DOCr_vent_deg', 'DOCr vent degradation', 'molC yr-1', loc_c1, loc_c0)
+       call sub_putvars ( 'DOCr_vent_deg', loc_iou, loc_ntrec, &
+            & loc_sig, loc_c1, loc_c0)
+       
+       ! Added DOCr background degradation in vent grid boxes MG 01/21/22
+       loc_sig = int_DOCr_bk_deg_sig/int_t_sig
+       call sub_adddef_netcdf (loc_iou, 1, 'DOCr_bk_deg', 'DOCr background degradation in vent boxes', 'molC yr-1', loc_c1, loc_c0)
+       call sub_putvars ( 'DOCr_bk_deg', loc_iou, loc_ntrec, &
+            & loc_sig, loc_c1, loc_c0)
+ 
+       ! Added DOCr background degradation in rest of ocean MG 01/24/22
+       loc_sig = int_DOCr_bkg_deg_sig/int_t_sig
+       call sub_adddef_netcdf (loc_iou, 1, 'DOCr_bkg_deg', 'DOCr background degradation', 'molC yr-1', loc_c1, loc_c0)
+       call sub_putvars ( 'DOCr_bkg_deg', loc_iou, loc_ntrec, &
+            & loc_sig, loc_c1, loc_c0)
+
+       ! Added DOC microbial degradation MG 02/21/22
+       loc_sig = int_DOC_deg_sig/int_t_sig
+       call sub_adddef_netcdf (loc_iou, 1, 'DOC_deg', 'DOC microbial degradation', 'molC yr-1', loc_c1, loc_c0)
+       call sub_putvars ( 'DOC_deg', loc_iou, loc_ntrec, &
+            & loc_sig, loc_c1, loc_c0)
+
+       ! Added DOCt production from NPP ! MG 03/16/22
+       loc_sig = int_DOC_prod_split1_sig/int_t_sig
+       call sub_adddef_netcdf (loc_iou, 1, 'DOC_prod_split1', 'Total DOC production from NPP', 'molC yr-1', loc_c1, loc_c0)
+       call sub_putvars ( 'DOC_prod_split1', loc_iou, loc_ntrec, &
+            & loc_sig, loc_c1, loc_c0)
+
+       ! Added DOCr production from deep POC split MG 03/16/22
+       loc_sig = int_DOCr_prod_split2_sig/int_t_sig
+       call sub_adddef_netcdf (loc_iou, 1, 'DOCr_prod_split2', 'DOCr production deep POC split', 'molC yr-1', loc_c1, loc_c0)
+       call sub_putvars ( 'DOCr_prod_split2', loc_iou, loc_ntrec, &
+            & loc_sig, loc_c1, loc_c0)
+
+       ! Added DOCsl production from deep POC split MG 03/16/22
+       loc_sig = int_DOCsl_prod_split2_sig/int_t_sig
+       call sub_adddef_netcdf (loc_iou, 1, 'DOCsl_prod_split2', 'DOCsl production from deep POC split', 'molC yr-1', loc_c1, loc_c0)
+       call sub_putvars ( 'DOCsl_prod_split2', loc_iou, loc_ntrec, &
+            & loc_sig, loc_c1, loc_c0)
+! MG 07/2022 MESMO 3c end
+
           loc_sig = int_NPP_sig/int_t_sig
           call sub_adddef_netcdf (loc_iou, 1, 'NPP_ocn', 'Net primary Productivity', 'molC yr-1', loc_c1, loc_c0) 
           call sub_putvars ( 'NPP_ocn', loc_iou, loc_ntrec, & 
@@ -2822,7 +2872,99 @@ print*,fun_calc_isotope_delta(dum_sfcatm1(ia_pCO2,1,1),dum_sfcatm1(ia_pCO2_13C,1
        END DO
        call sub_adddef_netcdf (loc_iou, 4, 'Nfix_m2', 'N-fixation (flux)', 'molN m-2 yr-1', loc_c0, loc_c0) 
        call sub_putvar3d_g ('Nfix_m2', loc_iou, n_maxi, n_maxj, n_maxk, loc_ntrec, loc_ijk(:,:,:), loc_mask) 
-   endif
+    endif
+    
+! MG 07/2022 MESMO 3c start
+    ! Added DOCr photodegradation MG 01/11/22
+    loc_ijk(:,:,:) = const_real_zero
+       DO i=1,n_imax
+          DO j=1,n_jmax
+             DO k=goldstein_k1(i,j),n_kmax
+                loc_ijk(i,j,k) = int_DOCr_photodeg_timeslice(i,j,k)/int_t_timeslice ! molC kg-1 yr-1
+             END DO
+          END DO
+       END DO
+       call sub_adddef_netcdf (loc_iou, 4, 'DOCr_photodeg', 'DOCr photodegradation', 'molC kg-1 yr-1', loc_c0, loc_c0)
+       call sub_putvar3d_g ('DOCr_photodeg', loc_iou, n_maxi, n_maxj, n_maxk, loc_ntrec, loc_ijk(:,:,:), loc_mask)
+ ! Added DOCr vent degradation MG 01/21/22
+    loc_ijk(:,:,:) = const_real_zero
+       DO i=1,n_imax
+          DO j=1,n_jmax
+             DO k=goldstein_k1(i,j),n_kmax
+                loc_ijk(i,j,k) = int_DOCr_vent_deg_timeslice(i,j,k)/int_t_timeslice ! molC kg-1 yr-1
+             END DO
+          END DO
+       END DO
+       call sub_adddef_netcdf (loc_iou, 4, 'DOCr_vent_deg', 'DOCr vent degradation', 'molC kg-1 yr-1', loc_c0, loc_c0)
+       call sub_putvar3d_g ('DOCr_vent_deg', loc_iou, n_maxi, n_maxj, n_maxk, loc_ntrec, loc_ijk(:,:,:), loc_mask)
+ ! Added DOCr background degradation in vent grid boxes MG 01/21/22
+    loc_ijk(:,:,:) = const_real_zero
+       DO i=1,n_imax
+          DO j=1,n_jmax
+             DO k=goldstein_k1(i,j),n_kmax
+                loc_ijk(i,j,k) = int_DOCr_bk_deg_timeslice(i,j,k)/int_t_timeslice ! molC kg-1 yr-1
+             END DO
+          END DO
+       END DO
+       call sub_adddef_netcdf (loc_iou, 4, 'DOCr_bk_deg', 'DOCr background degradation in vent boxes', 'molC kg-1 yr-1', loc_c0, loc_c0)
+       call sub_putvar3d_g ('DOCr_bk_deg', loc_iou, n_maxi, n_maxj, n_maxk, loc_ntrec, loc_ijk(:,:,:), loc_mask)
+    ! Added DOCr background degradation in rest of ocean MG 01/21/22
+    loc_ijk(:,:,:) = const_real_zero
+       DO i=1,n_imax
+          DO j=1,n_jmax
+             DO k=goldstein_k1(i,j),n_kmax
+                loc_ijk(i,j,k) = int_DOCr_bkg_deg_timeslice(i,j,k)/int_t_timeslice ! molC kg-1 yr-1
+             END DO
+          END DO
+       END DO
+       call sub_adddef_netcdf (loc_iou, 4, 'DOCr_bkg_deg', 'DOCr background degradation', 'molC kg-1 yr-1', loc_c0, loc_c0)
+       call sub_putvar3d_g ('DOCr_bkg_deg', loc_iou, n_maxi, n_maxj, n_maxk, loc_ntrec, loc_ijk(:,:,:), loc_mask)
+ ! Added DOC microbial degradation MG 02/21/22
+    loc_ijk(:,:,:) = const_real_zero
+       DO i=1,n_imax
+          DO j=1,n_jmax
+             DO k=goldstein_k1(i,j),n_kmax
+                loc_ijk(i,j,k) = int_DOC_deg_timeslice(i,j,k)/int_t_timeslice ! molC kg-1 yr-1
+             END DO
+          END DO
+       END DO
+       call sub_adddef_netcdf (loc_iou, 4, 'DOC_deg', 'DOC microbial degradation', 'molC kg-1 yr-1', loc_c0, loc_c0)
+       call sub_putvar3d_g ('DOC_deg', loc_iou, n_maxi, n_maxj, n_maxk, loc_ntrec, loc_ijk(:,:,:), loc_mask)
+! Added DOCt production from NPP !MG 03/16/22
+    loc_ijk(:,:,:) = const_real_zero 
+       DO i=1,n_imax 
+          DO j=1,n_jmax 
+             DO k=goldstein_k1(i,j),n_kmax 
+               loc_ijk(i,j,k) = int_DOC_prod_split1_timeslice(i,j,k)/int_t_timeslice  ! molC kg-1 yr-1
+              END DO
+          END DO
+       END DO
+       call sub_adddef_netcdf (loc_iou, 4, 'DOC_prod_split1', 'DOCt production from NPP', 'molC kg-1 yr-1', loc_c0, loc_c0) 
+       call sub_putvar3d_g ('DOC_prod_split1', loc_iou, n_maxi, n_maxj, n_maxk, loc_ntrec, loc_ijk(:,:,:), loc_mask) 
+! Added DOCr production deep POC split !MG 03/16/22, 03/30/22
+    loc_ijk(:,:,:) = const_real_zero 
+       DO i=1,n_imax 
+          DO j=1,n_jmax 
+             DO k=goldstein_k1(i,j),n_kmax 
+               loc_ijk(i,j,k) = int_DOCr_prod_split2_timeslice(i,j,k)*phys_ocn(ipo_rA,i,j,k)/int_t_timeslice  ! molC m-2 yr-1
+              END DO
+          END DO
+       END DO
+       call sub_adddef_netcdf (loc_iou, 4, 'DOCr_prod_split2', 'DOCr production deep POC split', 'molC m-2 yr-1', loc_c0, loc_c0) 
+       call sub_putvar3d_g ('DOCr_prod_split2', loc_iou, n_maxi, n_maxj, n_maxk, loc_ntrec, loc_ijk(:,:,:), loc_mask) 
+! Added DOCsl production deep POC split !MG 03/16/22, 03/30/22
+    loc_ijk(:,:,:) = const_real_zero 
+       DO i=1,n_imax 
+          DO j=1,n_jmax 
+             DO k=goldstein_k1(i,j),n_kmax 
+               loc_ijk(i,j,k) = int_DOCsl_prod_split2_timeslice(i,j,k)*phys_ocn(ipo_rA,i,j,k)/int_t_timeslice  ! molC m-2 yr-1
+              END DO
+          END DO
+       END DO
+       call sub_adddef_netcdf (loc_iou, 4, 'DOCsl_prod_split2', 'DOCsl production deep POC split', 'molC m-2 yr-1', loc_c0, loc_c0) 
+       call sub_putvar3d_g ('DOCsl_prod_split2', loc_iou, n_maxi, n_maxj, n_maxk, loc_ntrec, loc_ijk(:,:,:), loc_mask) 
+! MG 07/2022 MESMO 3c end
+        
     ! Added Net PP Tata 180425
     loc_ijk(:,:,:) = const_real_zero 
        DO i=1,n_imax 

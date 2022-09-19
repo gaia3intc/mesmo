@@ -134,7 +134,7 @@ CMN = var.cmn Makefile
 
 # ******************************************
 # MESMO 1 (cb_2in100_season_ssmax1_kv shortened to cb_2in10_season_kv)
-
+#
 # c goldstein (ocean + embm)
 # sent to Andy Price for tuning: c_2in100_seaswind:  the physics only version
 c_2in100_seaswind: $(FBJS_CB) $(CG)kvprofile.f90 $(CG)wind_interp.f $(CMN)
@@ -177,7 +177,9 @@ cbs_mesmo: $(FBJS_CBS) $(CG)kvprofile.f90 $(CMN)
 	$(FC) $(FLAGS) $(DOPTS_CB16_2IN100) -Dsedgem -Ddosc -Dssmax1 -Dkvprof $(FBJS_CBS) $(CG)kvprofile.f90 -o cbs_mesmo $(LDFLAGS)
 
 # ******************************************
-# KM - Nov, 2011 - create four models: MESMO2, MESMOG, MESMO2-ENTS, and MESMOG-ENTS
+# MESMO 2
+#
+# Four models: MESMO2, MESMOG, MESMO2-ENTS, and MESMOG-ENTS
 # have to always have -Dlndice to have ice mask
 #
 # mesmo2 (mesmo w/ monthly ecmwf winds, icemask PD, ocean biogeo w/ iron, silica, diatoms)
@@ -229,8 +231,13 @@ mesmo2_ents: $(FBJS_CBE) $(CG)kvprofile.f90 $(CG)wind_interp.f $(CMN)
 
 
 # ******************************************
-# KM - April, 2021
-# MESMO 3 (includes DOMr, which can be activated in gem_xxx_config.par
+# MESMO 3
+#
+# 2021 April: MESMO 3 (includes DOMr, which can be activated in gem_xxx_config.par but uncalibrated)
+#		ef-ratio is Laws formula, enabled by an ifdef option and compiled --> mesmo3
+# 2022 Sept: MESMO 3c (DOMr is calibrated according to Maya's thesis/paper
+#		ef-ratio is modified Dunne formula, enabled by a flag in biogem_config.par --> mesmo3_maya
+#		use new biogem_config.par and new biogem_bio_5NXT_PNCFeMM_SiO2_config.par...new parameters
 
 mesmo3: $(FBJS_CB) $(CG)kvprofile.f90 $(CG)wind_interp.f $(CMN)
 	$(FC) $(FLAGS) $(DOPTS_CB16_2IN100MM) -Ddosc -Dssmax_z2 -Dkvprof -Dutusurf -Dlndice -DicePD -Dstoich -Dgas_flux_dump -Dflex_efratio_laws $(FBJS_CB) -Dalb965 $(CG)kvprofile.f90 $(CG)wind_interp.f $(BGM)stoich.f90 -o mesmo3 $(LDFLAGS)
@@ -247,7 +254,11 @@ m3_lgmrad: $(FBJS_CB) $(CG)kvprofile.f90 $(CG)wind_interp.f $(CMN)
 # for full lgm bc, need also SO winds, which is controlled by a goin parameter
 m3_lgm: $(FBJS_CB) $(CG)kvprofile.f90 $(CG)wind_interp.f $(CMN)
 	$(FC) $(FLAGS) $(DOPTS_CB16_2IN100MM) -Ddosc -Dssmax_z2 -Dkvprof -Dutusurf -Dlndice -Dlgmice -Dorbitlgm -Dlgmrad -Dstoich -Dgas_flux_dump -Dflex_efratio_laws $(FBJS_CB) -Dalb965 $(CG)kvprofile.f90 $(CG)wind_interp.f $(BGM)stoich.f90 -o m3_lgm $(LDFLAGS)
-# ***************************************
+
+mesmo3_maya: $(FBJS_CB) $(CG)kvprofile.f90 $(CG)wind_interp.f $(CMN)
+	$(FC) $(FLAGS) $(DOPTS_CB16_2IN100MM) -Ddosc -Dssmax_z2 -Dkvprof -Dutusurf -Dlndice -DicePD -Dstoich -Dgas_flux_dump  $(FBJS_CB) -Dalb965 $(CG)kvprofile.f90 $(CG)wind_interp.f $(BGM)stoich.f90 -o mesmo3_maya $(LDFLAGS)
+
+
 
 clean:
 	rm -f *.o *.mod
